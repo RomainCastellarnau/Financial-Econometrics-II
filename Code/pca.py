@@ -2,7 +2,8 @@ import numpy as np
 import pandas as pd
 import sklearn as sk
 from sklearn.preprocessing import StandardScaler
-from sklearn_pandas import DataFrameMapper
+
+# from sklearn_pandas import DataFrameMapper
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.tools import add_constant
 
@@ -34,16 +35,22 @@ class PCA(object):
 
         """
 
-        self.sc = StandardScaler()
-        df = returns
-        self.mapper = DataFrameMapper([(list(df.columns), self.sc)], df_out=True)
-        self.returns = self.mapper.fit_transform(df.copy())
+        self.scalers = {}  # Dictionary to store scalers
         self.stocks = stocks
         self.k = k
 
+        # Standard scale each column of the returns DataFrame and save scalers
+        for col in returns.columns:
+            if any(ticker in col for ticker in stocks):
+                scaler = StandardScaler()
+                returns[col] = scaler.fit_transform(returns[col].values.reshape(-1, 1))
+                self.scalers[col] = scaler
+
+        self.returns = returns
         self.compute_covariance_matrix()
         self.compute_eigenvectors()
         self.compute_pc_scores()
+
         # self.compute_backtransformed_returns()
         # self.pca_model()
 
@@ -141,13 +148,100 @@ class PCA(object):
 
         """
 
-        self.pc_scores = np.matrix(self.returns) * np.matrix(self.eigenvectors)
+        self.pc_scores = np.matrix(self.returns) * np.matrix(self.eigenvectors)  # type: ignore
         self.pc_scores = pd.DataFrame(
             data=self.pc_scores,
             columns=self.pc_indices,
         )
-        self.pc_scores.index = pd.to_datetime(self.returns.index)
+        self.pc_scores.index = pd.to_datetime(self.returns.index)  # type: ignore
         self.reduced_pc_scores = self.pc_scores.iloc[:, : self.k]
+
+    def pca_model(self):
+        """
+        Function that returns a dictionary of linear models associated with each of the i stocks.
+
+        Takes as input:
+            None;
+
+        Output:
+            pca_model (dict): Dictionary containing the PCA model.
+        """
+
+        self.pca_model = {}
+
+        for i in self.stocks:
+            y = np.array(self.returns[i])
+            X = np.array(self.reduced_pc_scores)
+            X = add_constant(X)  # Add a constant term for the intercept
+
+            try:
+                model_i = OLS(y, X, hasconst=True).fit()
+                self.pca_model[i] = {
+                    "model_result": model_i,
+                    "alpha": model_i.params[0],
+                    "beta": model_i.params[1:],
+                    "residuals": model_i.resid,
+                }
+            except KeyError as e:
+                print(f"Error for stock {i}: {e}")
+                print("Columns in reduced_pc_scores:")
+                print(self.reduced_pc_scores.columns.tolist())
+                print("Columns in returns:")
+                print(self.returns.columns.tolist())
+                raise
+
+        return self.pca_model
+
+    def optimisation_routine(self): 
+        
+        """
+        Function that performs the optimisation routine to compute the weights of the core equity portfolio.
+
+        Takes as input:
+            None;
+
+        Output:
+            None;
+        """
+
+        # Compute the covariance matrix of the residuals
+        self.residuals_cov_matrix = np.cov(
+            np.array([self.pca_model[i]["residuals"] for i in self.stocks]), bias=True
+        )
+        self.residuals_cov_matrix = pd.DataFrame(
+            data=self.residuals_cov_matrix,
+            columns=self.stocks,
+            index=self.stocks,
+        )
+
+        # Compute the weights of the core equity portfolio
+        self.core_equity_portfolio = np.linalg.inv(
+            self.residuals_cov_matrix
+        ) @ self.eigenvectors.iloc[:, : self.k]
+        self.core_equity_portfolio = pd.DataFrame(
+            data=self.core_equity_portfolio,
+            columns=self.pc_indices,
+            index=self.stocks,
+        )
+
+
+    def core_equity_portfolio(self):
+        """
+        Compute the weights of the equity portfolio designed to replicate the first core equity factor,
+        defined as:
+
+        - 𝐴𝑟𝑔𝑚𝑖𝑛𝑤𝑘(
+
+        subject to:
+            - ∑ 𝑤𝑘 =1 
+            - 𝑤𝑘,𝑖  0 
+            - ∑𝑤𝑘*𝑖𝑏̂𝑖 = 1
+
+        with:
+        - Ω̂ the sample covariance matrix of the stock returns,
+        - 𝑏̂𝑖,1 the estimated sensitivity of stock 𝑖 to the 1st core equity factor.
+
+        """
 
     # # def compute_backtransformed_returns(self):
     #     """
@@ -235,41 +329,4 @@ class PCA(object):
     #         columns=backtransformed_yields.columns,
     #     )
     #     return backtransformed_yields
-
-    def pca_model(self):
-        """
-        Function that returns a dictionary of linear models associated with each of the i stocks.
-
-        Takes as input:
-            None;
-
-        Output:
-            pca_model (dict): Dictionary containing the PCA model.
-        """
-
-        pca_model = {}
-            
-        for i in self.stocks:
-            y = np.array(self.returns[i])
-            X = np.array(self.reduced_pc_scores)
-            X = add_constant(X)  # Add a constant term for the intercept
-
-        try:
-            model_i = OLS(y, X, hasconst=True).fit()
-            pca_model[i] = {
-                'model_result': model_i,
-                'alpha': model_i.params[0],
-                'beta': model_i.params[1:],
-                'residuals': model_i.resid,
-            }
-        except KeyError as e:
-            print(f"Error for stock {i}: {e}")
-            print("Columns in reduced_pc_scores:")
-            print(self.reduced_pc_scores.columns.tolist())
-            print("Columns in returns:")
-            print(self.returns.columns.tolist())
-            raise
-
-        return pca_model
-
     # def core_portfolio_weights(self )
