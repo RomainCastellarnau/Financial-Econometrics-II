@@ -3,6 +3,8 @@ import pandas as pd
 import sklearn as sk
 from sklearn.preprocessing import StandardScaler
 from sklearn_pandas import DataFrameMapper
+from statsmodels.regression.linear_model import OLS
+from statsmodels.tools.tools import add_constant
 
 
 class PCA(object):
@@ -42,7 +44,8 @@ class PCA(object):
         self.compute_covariance_matrix()
         self.compute_eigenvectors()
         self.compute_pc_scores()
-        self.compute_backtransformed_returns()
+        # self.compute_backtransformed_returns()
+        # self.pca_model()
 
     def select_pc_number(self, threshold):
         """
@@ -142,93 +145,128 @@ class PCA(object):
         self.pc_scores = pd.DataFrame(
             data=self.pc_scores,
             columns=self.pc_indices,
-            index=pd.to_datetime(self.returns.index),
         )
+        self.pc_scores.index = pd.to_datetime(self.returns.index)
         self.reduced_pc_scores = self.pc_scores.iloc[:, : self.k]
 
-    def compute_backtransformed_returns(self):
-        """
+    # # def compute_backtransformed_returns(self):
+    #     """
 
-            This function performs the inverse transformation to obtain back-transformed returns from the reduced number of pc scores.
+    #         This function performs the inverse transformation to obtain back-transformed returns from the reduced number of pc scores.
+
+    #     Takes as input:
+
+    #         None;
+
+    #     Output:
+
+    #         None;
+
+    #     """
+
+    #     self.inv_eigenvectors = pd.DataFrame(
+    #         data=np.linalg.inv(np.matrix(self.eigenvectors)),
+    #         columns=self.stocks,
+    #         index=self.pc_indices,
+    #     )
+    #     self.inv_reduced_eigenvectors = self.inv_eigenvectors.iloc[: self.k, :]
+
+    #     self.backtransformed_yields = np.matrix(self.reduced_pc_scores) * np.matrix(
+    #         self.inv_reduced_eigenvectors
+    #     )
+    #     self.backtransformed_yields = pd.DataFrame(
+    #         data=self.backtransformed_yields,
+    #         columns=self.stocks,
+    #         index=self.reduced_pc_scores.index,
+    #     )
+
+    #     inverse_scaled_values = self.sc.inverse_transform(self.backtransformed_yields)
+    #     self.backtransformed_yields = pd.DataFrame(
+    #         inverse_scaled_values,
+    #         index=self.backtransformed_yields.index,
+    #         columns=self.backtransformed_yields.columns,
+    #     )
+
+    # def out_of_sample_projection(self, train_eigenvectors, test_yields):
+    #     """
+
+    #         Function that applies dimension reduction on the test returns using the eigenvectors computed on the train dataset.
+    #         Back-transforms the test returns into a lower-dimensional space.
+
+    #     Takes as input:
+
+    #         train_eigenvectors (pd.DataFrame): Pandas DataFrame containing the values of the eigenvectors computed on the train dataset;
+    #         test_yields (pd.DataFrame): Pandas DataFrame containing the values of the returns of the test;
+
+    #     Output:
+
+    #         backtransformed_yields (pd.DataFrame): Pandas DataFrame containing the values of the back-transformed returns.
+
+    #     """
+
+    #     scores_oos = np.matrix(test_yields) * np.matrix(train_eigenvectors)
+    #     scores_oos = pd.DataFrame(
+    #         data=scores_oos,
+    #         columns=self.pc_indices,
+    #         index=pd.to_datetime(test_yields.index),
+    #     )
+    #     reduced_scores_oos = scores_oos.iloc[:, : self.k]
+
+    #     inv_eigenvectors_oos = pd.DataFrame(
+    #         data=np.linalg.inv(np.matrix(train_eigenvectors)),
+    #         columns=self.stocks,
+    #         index=self.pc_indices,
+    #     )
+    #     inv_reduced_eigenvectors_oos = inv_eigenvectors_oos.iloc[: self.k, :]
+
+    #     backtransformed_yields = np.matrix(reduced_scores_oos) * np.matrix(
+    #         inv_reduced_eigenvectors_oos
+    #     )
+    #     backtransformed_yields = pd.DataFrame(
+    #         data=backtransformed_yields,
+    #         columns=self.stocks,
+    #         index=reduced_scores_oos.index,
+    #     )
+
+    #     inverse_scaled_values = self.sc.inverse_transform(backtransformed_yields)
+    #     backtransformed_yields = pd.DataFrame(
+    #         inverse_scaled_values,
+    #         index=backtransformed_yields.index,
+    #         columns=backtransformed_yields.columns,
+    #     )
+    #     return backtransformed_yields
+
+    def pca_model(self):
+        """
+        Function that returns a dictionary of linear models associated with each of the i stocks.
 
         Takes as input:
-
             None;
 
         Output:
-
-            None;
-
+            pca_model (dict): Dictionary containing the PCA model.
+            alpha_i (list): List containing the intercepts of the linear model associated with the i stock.
+            beta_i (list): List containing the slopes of the linear model associated with the i stock.
+            esp_i (list): List of Lists containing the errors on the estimation of the i stock's returns.
         """
 
-        self.inv_eigenvectors = pd.DataFrame(
-            data=np.linalg.inv(np.matrix(self.eigenvectors)),
-            columns=self.stocks,
-            index=self.pc_indices,
-        )
-        self.inv_reduced_eigenvectors = self.inv_eigenvectors.iloc[: self.k, :]
+        alpha_i = []
+        beta_i = []
+        esp_i = []
+        pca_model = {}
 
-        self.backtransformed_yields = np.matrix(self.reduced_pc_scores) * np.matrix(
-            self.inv_reduced_eigenvectors
-        )
-        self.backtransformed_yields = pd.DataFrame(
-            data=self.backtransformed_yields,
-            columns=self.stocks,
-            index=self.reduced_pc_scores.index,
-        )
+        for i in self.stocks:
+            y = np.array(self.returns[i])
+            X = np.array(
+                self.reduced_pc_scores.values
+            )  # Use values to get the underlying NumPy array
+            X = add_constant(X)  # Add a constant term for the intercept
 
-        inverse_scaled_values = self.sc.inverse_transform(self.backtransformed_yields)
-        self.backtransformed_yields = pd.DataFrame(
-            inverse_scaled_values,
-            index=self.backtransformed_yields.index,
-            columns=self.backtransformed_yields.columns,
-        )
+            pca_model[i] = OLS(y, X, hasconst=True).fit()
+            alpha_i.append(pca_model[i].params[0])
+            beta_i.append(pca_model[i].params[1:])
+            esp_i.append(pca_model[i].resid)
 
-    def out_of_sample_projection(self, train_eigenvectors, test_yields):
-        """
+        return pca_model, alpha_i, beta_i, esp_i
 
-            Function that applies dimension reduction on the test returns using the eigenvectors computed on the train dataset.
-            Back-transforms the test returns into a lower-dimensional space.
-
-        Takes as input:
-
-            train_eigenvectors (pd.DataFrame): Pandas DataFrame containing the values of the eigenvectors computed on the train dataset;
-            test_yields (pd.DataFrame): Pandas DataFrame containing the values of the returns of the test;
-
-        Output:
-
-            backtransformed_yields (pd.DataFrame): Pandas DataFrame containing the values of the back-transformed returns.
-
-        """
-
-        scores_oos = np.matrix(test_yields) * np.matrix(train_eigenvectors)
-        scores_oos = pd.DataFrame(
-            data=scores_oos,
-            columns=self.pc_indices,
-            index=pd.to_datetime(test_yields.index),
-        )
-        reduced_scores_oos = scores_oos.iloc[:, : self.k]
-
-        inv_eigenvectors_oos = pd.DataFrame(
-            data=np.linalg.inv(np.matrix(train_eigenvectors)),
-            columns=self.stocks,
-            index=self.pc_indices,
-        )
-        inv_reduced_eigenvectors_oos = inv_eigenvectors_oos.iloc[: self.k, :]
-
-        backtransformed_yields = np.matrix(reduced_scores_oos) * np.matrix(
-            inv_reduced_eigenvectors_oos
-        )
-        backtransformed_yields = pd.DataFrame(
-            data=backtransformed_yields,
-            columns=self.stocks,
-            index=reduced_scores_oos.index,
-        )
-
-        inverse_scaled_values = self.sc.inverse_transform(backtransformed_yields)
-        backtransformed_yields = pd.DataFrame(
-            inverse_scaled_values,
-            index=backtransformed_yields.index,
-            columns=backtransformed_yields.columns,
-        )
-        return backtransformed_yields
+    # def core_portfolio_weights(self )
