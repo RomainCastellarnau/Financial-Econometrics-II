@@ -248,21 +248,27 @@ class PCA(object):
         """
 
         pca_model = {}
-
+            
         for i in self.stocks:
             y = np.array(self.returns[i])
             X = np.array(self.reduced_pc_scores)
             X = add_constant(X)  # Add a constant term for the intercept
 
+        try:
             model_i = OLS(y, X, hasconst=True).fit()
-
-            # Save the entire model result for stock i
             pca_model[i] = {
-                "model_result": model_i,
-                "alpha": model_i.params[0],
-                "beta": model_i.params[1:],
-                "residuals": model_i.resid,
+                'model_result': model_i,
+                'alpha': model_i.params[0],
+                'beta': model_i.params[1:],
+                'residuals': model_i.resid,
             }
+        except KeyError as e:
+            print(f"Error for stock {i}: {e}")
+            print("Columns in reduced_pc_scores:")
+            print(self.reduced_pc_scores.columns.tolist())
+            print("Columns in returns:")
+            print(self.returns.columns.tolist())
+            raise
 
         return pca_model
 
