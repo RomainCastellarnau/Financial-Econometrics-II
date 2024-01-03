@@ -42,8 +42,7 @@ class PCA(object):
         self.compute_covariance_matrix()
         self.compute_eigenvectors()
         self.compute_pc_scores()
-        self.compute_backtransformed_yields()
-
+        self.compute_backtransformed_returns()
 
     def select_pc_number(self, threshold):
         """
@@ -147,7 +146,7 @@ class PCA(object):
         )
         self.reduced_pc_scores = self.pc_scores.iloc[:, : self.k]
 
-    def compute_backtransformed_yields(self):
+    def compute_backtransformed_returns(self):
         """
 
             This function performs the inverse transformation to obtain back-transformed returns from the reduced number of pc scores.
