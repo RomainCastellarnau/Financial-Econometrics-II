@@ -2,10 +2,9 @@ import numpy as np
 import pandas as pd
 import sklearn as sk
 from sklearn.preprocessing import StandardScaler
-
-# from sklearn_pandas import DataFrameMapper
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.tools import add_constant
+from scipy.optimize import minimize
 
 
 class PCA(object):
@@ -167,7 +166,7 @@ class PCA(object):
             pca_model (dict): Dictionary containing the PCA model.
         """
 
-        self.pca_model = {}
+        self.pca_models = {}
 
         for i in self.stocks:
             y = np.array(self.returns[i])
@@ -176,7 +175,7 @@ class PCA(object):
 
             try:
                 model_i = OLS(y, X, hasconst=True).fit()
-                self.pca_model[i] = {
+                self.pca_models[i] = {
                     "model_result": model_i,
                     "alpha": model_i.params[0],
                     "beta": model_i.params[1:],
@@ -190,10 +189,9 @@ class PCA(object):
                 print(self.returns.columns.tolist())
                 raise
 
-        return self.pca_model
+        return self.pca_models
 
-    def optimisation_routine(self): 
-        
+    def optimisation_routine(self):
         """
         Function that performs the optimisation routine to compute the weights of the core equity portfolio.
 
@@ -206,7 +204,7 @@ class PCA(object):
 
         # Compute the covariance matrix of the residuals
         self.residuals_cov_matrix = np.cov(
-            np.array([self.pca_model[i]["residuals"] for i in self.stocks]), bias=True
+            np.array([self.pca_models[i]["residuals"] for i in self.stocks]), bias=True
         )
         self.residuals_cov_matrix = pd.DataFrame(
             data=self.residuals_cov_matrix,
@@ -214,16 +212,16 @@ class PCA(object):
             index=self.stocks,
         )
 
-        # Compute the weights of the core equity portfolio
-        self.core_equity_portfolio = np.linalg.inv(
-            self.residuals_cov_matrix
-        ) @ self.eigenvectors.iloc[:, : self.k]
-        self.core_equity_portfolio = pd.DataFrame(
-            data=self.core_equity_portfolio,
-            columns=self.pc_indices,
-            index=self.stocks,
-        )
-
+        # # Compute the weights of the core equity portfolio
+        # self.core_equity_portfolio = (
+        #     np.linalg.inv(self.residuals_cov_matrix)
+        #     @ self.eigenvectors.iloc[:, : self.k]
+        # )
+        # self.core_equity_portfolio = pd.DataFrame(
+        #     data=self.core_equity_portfolio,
+        #     columns=self.pc_indices,
+        #     index=self.stocks,
+        # )
 
     def core_equity_portfolio(self):
         """
@@ -233,8 +231,8 @@ class PCA(object):
         - 𝐴𝑟𝑔𝑚𝑖𝑛𝑤𝑘(
 
         subject to:
-            - ∑ 𝑤𝑘 =1 
-            - 𝑤𝑘,𝑖  0 
+            - ∑ 𝑤𝑘1 
+            - 𝑤𝑘, 0 
             - ∑𝑤𝑘*𝑖𝑏̂𝑖 = 1
 
         with:
