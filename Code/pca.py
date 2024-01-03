@@ -245,28 +245,25 @@ class PCA(object):
 
         Output:
             pca_model (dict): Dictionary containing the PCA model.
-            alpha_i (list): List containing the intercepts of the linear model associated with the i stock.
-            beta_i (list): List containing the slopes of the linear model associated with the i stock.
-            esp_i (list): List of Lists containing the errors on the estimation of the i stock's returns.
         """
 
-        alpha_i = []
-        beta_i = []
-        esp_i = []
         pca_model = {}
 
         for i in self.stocks:
             y = np.array(self.returns[i])
-            X = np.array(
-                self.reduced_pc_scores.values
-            )  # Use values to get the underlying NumPy array
+            X = np.array(self.reduced_pc_scores)
             X = add_constant(X)  # Add a constant term for the intercept
 
-            pca_model[i] = OLS(y, X, hasconst=True).fit()
-            alpha_i.append(pca_model[i].params[0])
-            beta_i.append(pca_model[i].params[1:])
-            esp_i.append(pca_model[i].resid)
+            model_i = OLS(y, X, hasconst=True).fit()
 
-        return pca_model, alpha_i, beta_i, esp_i
+            # Save the entire model result for stock i
+            pca_model[i] = {
+                "model_result": model_i,
+                "alpha": model_i.params[0],
+                "beta": model_i.params[1:],
+                "residuals": model_i.resid,
+            }
+
+        return pca_model
 
     # def core_portfolio_weights(self )
