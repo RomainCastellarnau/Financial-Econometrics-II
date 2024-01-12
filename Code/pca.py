@@ -13,7 +13,8 @@ class PCA(object):
     This class derives the principal components of a given data matrix. It first computes the covariance matrix of the dataset.
     Eigenvectors are then computed, and we use the eigenvector to construct the PC scores. We retain only k principal components
     and back-transform the values to their original unit (returns in %) using only a k x number of stocks dimensional space.
-
+    We define the core equity factors as the main principal components, rescaled to the same volatility as that of the benchmark.
+    
     """
 
     def __init__(self, returns, stocks, k):
