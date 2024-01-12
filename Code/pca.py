@@ -59,24 +59,9 @@ class PCA(object):
         self.compute_covariance_matrix()
         self.compute_eigenvectors()
         self.compute_pc_scores()
+        self.rescale_pc(self.benchmark.std())
 
-        # self.compute_backtransformed_returns()
-        # self.pca_model()
-
-    def rescale_pc(self, benchmark_vol):
-        """
-        Function that rescales the Principal Components to the same volatility as that of the benchmark.
-
-        Takes as input:
-            benchmark_vol (float): The volatility of the benchmark;
-
-        Output:
-            None;
-        """
-
-        # Rescale the PC scores to the same volatility as that of the benchmark
-        self.rescaled_pc_scores = self.pc_scores * benchmark_vol / self.pc_scores.std()
-
+    
     def select_pc_number(self, threshold):
         """
 
@@ -179,6 +164,20 @@ class PCA(object):
         self.pc_scores.index = pd.to_datetime(self.returns.index)  # type: ignore
         self.reduced_pc_scores = self.pc_scores.iloc[:, : self.k]
 
+    def rescale_pc(self, benchmark_vol):
+        """
+        Function that rescales the Principal Components to the same volatility as that of the benchmark.
+
+        Takes as input:
+            benchmark_vol (float): The volatility of the benchmark;
+
+        Output:
+            None;
+        """
+
+        # Rescale the PC scores to the same volatility as that of the benchmark
+        self.rescaled_pc_scores = self.pc_scores * benchmark_vol / self.pc_scores.std()
+
     def pca_model(self):
         """
         Function that returns a dictionary of linear models associated with each of the i stocks.
@@ -194,7 +193,7 @@ class PCA(object):
 
         for i in self.stocks:
             y = np.array(self.returns[i])
-            X = np.array(self.reduced_pc_scores)
+            X = np.array(self.rescaled_pc_scores)
             X = add_constant(X)  # Add a constant term for the intercept
 
             try:
