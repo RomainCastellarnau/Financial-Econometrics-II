@@ -14,7 +14,7 @@ class PCA(object):
     Eigenvectors are then computed, and we use the eigenvector to construct the PC scores. We retain only k principal components
     and back-transform the values to their original unit (returns in %) using only a k x number of stocks dimensional space.
     We define the core equity factors as the main principal components, rescaled to the same volatility as that of the benchmark.
-    
+
     """
 
     def __init__(self, returns, stocks, k):
@@ -34,11 +34,12 @@ class PCA(object):
             - self.mapper (sklearn_pandas.DataFrameMapper()): sklearn_pandas instance used to standardize the stocks returns dataframe by columns;
 
         """
-
+        self.benchmark = returns[:, 0] # pd.DataFrame(returns[:, 0], index=returns[:, 0], columns=["benchmark"])
+        self.returns = returns[:, 1:] #pd.DataFrame(returns[:, 1:], index=returns[:, 0], columns=stocks)
         self.scalers = {}  # Dictionary to store scalers
-        self.stocks = stocks
-        self.k = k
-
+        self.stocks = stocks # List of stocks tickers on which PCA is performed
+        self.k = k # Number of Principal Components retained in the final model
+        
         # Standard scale each column of the returns DataFrame and save scalers
         for col in returns.columns:
             if any(ticker in col for ticker in stocks):
@@ -232,8 +233,8 @@ class PCA(object):
         - 𝐴𝑟𝑔𝑚𝑖𝑛𝑤𝑘(
 
         subject to:
-            - ∑ 𝑤1 
-            - 𝑤𝑘,0 
+            - ∑ 𝑤 
+            - 𝑤𝑘0 
             - ∑𝑤𝑘*𝑖𝑏̂𝑖 = 1
 
         with:
