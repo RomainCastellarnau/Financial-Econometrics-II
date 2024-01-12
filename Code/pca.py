@@ -34,12 +34,16 @@ class PCA(object):
             - self.mapper (sklearn_pandas.DataFrameMapper()): sklearn_pandas instance used to standardize the stocks returns dataframe by columns;
 
         """
-        self.benchmark = returns[:, 0] # pd.DataFrame(returns[:, 0], index=returns[:, 0], columns=["benchmark"])
-        self.returns = returns[:, 1:] #pd.DataFrame(returns[:, 1:], index=returns[:, 0], columns=stocks)
+        self.benchmark = returns[
+            :, 0
+        ]  # pd.DataFrame(returns[:, 0], index=returns[:, 0], columns=["benchmark"])
+        self.returns = returns[
+            :, 1:
+        ]  # pd.DataFrame(returns[:, 1:], index=returns[:, 0], columns=stocks)
         self.scalers = {}  # Dictionary to store scalers
-        self.stocks = stocks # List of stocks tickers on which PCA is performed
-        self.k = k # Number of Principal Components retained in the final model
-        
+        self.stocks = stocks  # List of stocks tickers on which PCA is performed
+        self.k = k  # Number of Principal Components retained in the final model
+
         # Standard scale each column of the returns DataFrame and save scalers
         for col in returns.columns:
             if any(ticker in col for ticker in stocks):
@@ -54,6 +58,20 @@ class PCA(object):
 
         # self.compute_backtransformed_returns()
         # self.pca_model()
+
+    def rescale_pc(self, benchmark_vol):
+        """
+        Function that rescales the Principal Components to the same volatility as that of the benchmark.
+
+        Takes as input:
+            benchmark_vol (float): The volatility of the benchmark;
+
+        Output:
+            None;
+        """
+
+        # Rescale the PC scores to the same volatility as that of the benchmark
+        self.rescaled_pc_scores = self.pc_scores * benchmark_vol / self.pc_scores.std()
 
     def select_pc_number(self, threshold):
         """
@@ -233,8 +251,8 @@ class PCA(object):
         - 𝐴𝑟𝑔𝑚𝑖𝑛𝑤𝑘(
 
         subject to:
-            - ∑ 𝑤 
-            - 𝑤𝑘0 
+            - ∑
+            - 𝑤 
             - ∑𝑤𝑘*𝑖𝑏̂𝑖 = 1
 
         with:
