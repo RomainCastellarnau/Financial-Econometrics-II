@@ -17,7 +17,7 @@ class PCA(object):
 
     """
 
-    def __init__(self, returns, stocks, k):
+    def __init__(self, returns, stocks, k=None):
         """
 
         Initializes the PCA object.
@@ -34,6 +34,9 @@ class PCA(object):
             - self.mapper (sklearn_pandas.DataFrameMapper()): sklearn_pandas instance used to standardize the stocks returns dataframe by columns;
 
         """
+        if k == None:
+            k = len(stocks)
+
         self.benchmark = returns[
             :, 0
         ]  # pd.DataFrame(returns[:, 0], index=returns[:, 0], columns=["benchmark"])
@@ -51,7 +54,8 @@ class PCA(object):
                 returns[col] = scaler.fit_transform(returns[col].values.reshape(-1, 1))
                 self.scalers[col] = scaler
 
-        self.returns = returns
+        # Compute the covariance matrix of the stocks returns across the whole time horizon
+        self.std_returns = returns
         self.compute_covariance_matrix()
         self.compute_eigenvectors()
         self.compute_pc_scores()
@@ -111,10 +115,10 @@ class PCA(object):
 
         """
 
-        self.cov_matrix = np.array(self.returns).T
-        self.cov_matrix = np.cov(self.cov_matrix, bias=True)
-        self.cov_matrix = pd.DataFrame(
-            data=self.cov_matrix, columns=self.stocks, index=self.stocks
+        self.std_cov_matrix = np.array(self.std_returns).T
+        self.std_cov_matrix = np.cov(self.std_cov_matrix, bias=True)
+        self.std_cov_matrix = pd.DataFrame(
+            data=self.std_cov_matrix, columns=self.stocks, index=self.stocks
         )
 
     def compute_eigenvectors(self):
@@ -134,7 +138,7 @@ class PCA(object):
 
         """
 
-        eig = np.linalg.eig(self.cov_matrix)
+        eig = np.linalg.eig(self.std_cov_matrix)
         self.pc_indices = [f"PC_{i}" for i in range(1, eig[0].shape[0] + 1)]
 
         self.eigenvalues = pd.DataFrame(
@@ -252,7 +256,7 @@ class PCA(object):
 
         subject to:
             - ∑
-            - 𝑤 
+            -
             - ∑𝑤𝑘*𝑖𝑏̂𝑖 = 1
 
         with:
