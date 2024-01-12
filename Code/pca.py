@@ -250,23 +250,26 @@ class PCA(object):
         return optimized.x
 
     
-    def core_equity_portfolio(self):
+    def core_equity_ptf(self): 
         """
-        Compute the weights of the equity portfolio designed to replicate the first core equity factor,
-        defined as:
+        Function that returns the weights of the core equity portfolio.
 
-        - 𝐴𝑟𝑔𝑚𝑖𝑛𝑤𝑘(
+        Takes as input:
+            None;
 
-        subject to:
-            - ∑
-            -
-            - ∑𝑤𝑘*𝑖𝑏̂𝑖 = 1
-
-        with:
-        - Ω̂ the sample covariance matrix of the stock returns,
-        - 𝑏̂𝑖,1 the estimated sensitivity of stock 𝑖 to the 1st core equity factor.
-
+        Output:
+            core_equity_ptf (dict): Dictionary containing the weights of the core equity portfolio.
         """
+        self.core_equity_ptfs = {}
+        self.core_equity_ptfs = self.optim_routine()
+
+        #Reformat the dictionary to a pandas dataframe with the columns being the stocks and the row being the weight
+        self.core_equity_ptfs = pd.DataFrame(data = self.core_equity_ptfs, columns = self.stocks)
+        self.core_equity_ptfs = self.core_equity_ptfs.T
+        self.core_equity_ptfs.columns = ['weights']
+        
+        return self.core_equity_ptfs
+    
 
     # # def compute_backtransformed_returns(self):
     #     """
