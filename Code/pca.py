@@ -52,14 +52,13 @@ class PCA(object):
                 returns[col] = scaler.fit_transform(returns[col].values.reshape(-1, 1))
                 self.scalers[col] = scaler
 
-        # Compute the covariance matrix of the stocks returns across the whole time horizon
         self.std_returns = returns
-        self.compute_covariance_matrix(std=True)
+        self.std_returns = self.std_returns[:, 1:]
+        self.benchmark_vol = self.benchmark.std()
+        self.compute_covariance_matrix()
         self.compute_eigenvectors()
         self.compute_pc_scores()
-        self.rescale_pc(self.benchmark.std())
-
-        self.compute_covariance_matrix(std=False)
+        self.rescale_pc()
 
     def select_pc_number(self, threshold):
         """
@@ -84,7 +83,7 @@ class PCA(object):
                 k += 1
         return k
 
-    def compute_covariance_matrix(self, std=True):
+    def compute_covariance_matrix(self):
         """
 
             Calculates the covariance matrix of the standardized stocks returns across the whole time horizon.
@@ -98,18 +97,17 @@ class PCA(object):
             None;
 
         """
-        if std == True:
-            self.std_cov_matrix = np.array(self.std_returns).T
-            self.std_cov_matrix = np.cov(self.std_cov_matrix, bias=True)
-            self.std_cov_matrix = pd.DataFrame(
-                data=self.std_cov_matrix, columns=self.stocks, index=self.stocks
-            )
-        else:
-            self.cov_matrix = np.array(self.returns).T
-            self.cov_matrix = np.cov(self.cov_matrix, bias=True)
-            self.cov_matrix = pd.DataFrame(
-                data=self.cov_matrix, columns=self.stocks, index=self.stocks
-            )
+
+        self.std_cov_matrix = np.array(self.std_returns).T
+        self.cov_matrix = np.array(self.returns).T
+        self.std_cov_matrix = np.cov(self.std_cov_matrix, bias=True)
+        self.cov_matrix = np.cov(self.cov_matrix, bias=True)
+        self.std_cov_matrix = pd.DataFrame(
+            data=self.std_cov_matrix, columns=self.stocks, index=self.stocks
+        )
+        self.cov_matrix = pd.DataFrame(
+            data=self.cov_matrix, columns=self.stocks, index=self.stocks
+        )
 
     def compute_eigenvectors(self):
         """
@@ -169,19 +167,21 @@ class PCA(object):
         self.pc_scores.index = pd.to_datetime(self.returns.index)  # type: ignore
         self.reduced_pc_scores = self.pc_scores.iloc[:, : self.k]
 
-    def rescale_pc(self, benchmark_vol):
+    def rescale_pc(self):
         """
         Function that rescales the Principal Components to the same volatility as that of the benchmark.
 
         Takes as input:
-            benchmark_vol (float): The volatility of the benchmark;
+            None;
 
         Output:
             None;
         """
 
         # Rescale the PC scores to the same volatility as that of the benchmark
-        self.rescaled_pc_scores = self.pc_scores * benchmark_vol / self.pc_scores.std()
+        self.rescaled_pc_scores = (
+            self.pc_scores * self.benchmark_vol / self.pc_scores.std()
+        )
 
     def pca_model(self):
         """
