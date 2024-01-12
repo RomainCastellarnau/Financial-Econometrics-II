@@ -278,20 +278,23 @@ class PCA(object):
         self.core_equity_ptfs.columns = ["weights"]
 
         return self.core_equity_ptfs
-    
-    def alpha_core_ptf(self): 
+
+    def alpha_core_ptf(self):
         """
-        Function that returns an estimation of the alpha of the core equity portfolio.
+        Calculate an estimation of the alpha of the core equity portfolio.
 
-        Takes as input:
-            None;
-
-        Output:
-            alpha_core_ptf (int): Alpha of the core equity portfolio.
+        Returns:
+            float: Alpha of the core equity portfolio.
         """
+        # Ensure core equity portfolio weights are already computed
+        if not hasattr(self, "core_equity_ptfs"):
+            self.core_equity_ptf()
 
-        #Compute the return of the core equity portfolio
-        return_core_ptf = np.mean(self.core_equity_ptf()["weights"].T @ self.returns)
+        # Compute the return of the core equity portfolio
+        return_core_ptf = np.mean(self.core_equity_ptfs["weights"].T @ self.returns)
+        # Compute the return of the benchmark
+        return_benchmark = np.mean(self.benchmark)
+        # Compute the alpha of the core equity portfolio
+        alpha_core_ptf = return_core_ptf - return_benchmark
 
-
-    
+        return alpha_core_ptf
