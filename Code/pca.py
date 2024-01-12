@@ -222,9 +222,10 @@ class PCA(object):
             #objective: min vol
             util=varp**0.5
             return util
+        
         n=len(cov)
         # initial conditions: equal weights
-        W=np.ones([n])/n                 
+        W=np.ones([n])/n             
         # weights between 0%..100%: no shorts
         b_=[(0.,1.) for i in range(n)]   
         # No leverage: unitary constraint (sum weights = 100%)
