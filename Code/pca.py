@@ -56,14 +56,13 @@ class PCA(object):
 
         # Compute the covariance matrix of the stocks returns across the whole time horizon
         self.std_returns = returns
-        self.compute_covariance_matrix(std = True)
+        self.compute_covariance_matrix(std=True)
         self.compute_eigenvectors()
         self.compute_pc_scores()
         self.rescale_pc(self.benchmark.std())
 
-        self.compute_covariance_matrix(std = False)
+        self.compute_covariance_matrix(std=False)
 
-    
     def select_pc_number(self, threshold):
         """
 
@@ -87,7 +86,7 @@ class PCA(object):
                 k += 1
         return k
 
-    def compute_covariance_matrix(self ,std = True):
+    def compute_covariance_matrix(self, std=True):
         """
 
             Calculates the covariance matrix of the standardized stocks returns across the whole time horizon.
@@ -101,19 +100,18 @@ class PCA(object):
             None;
 
         """
-        if std ==  True :
+        if std == True:
             self.std_cov_matrix = np.array(self.std_returns).T
             self.std_cov_matrix = np.cov(self.std_cov_matrix, bias=True)
             self.std_cov_matrix = pd.DataFrame(
                 data=self.std_cov_matrix, columns=self.stocks, index=self.stocks
             )
-        else :
+        else:
             self.cov_matrix = np.array(self.returns).T
             self.cov_matrix = np.cov(self.cov_matrix, bias=True)
             self.cov_matrix = pd.DataFrame(
                 data=self.cov_matrix, columns=self.stocks, index=self.stocks
             )
-        
 
     def compute_eigenvectors(self):
         """
@@ -199,8 +197,8 @@ class PCA(object):
         """
 
         self.pca_models = {}
-        #length index of the returns of the benchmark 
-        self.core_eq_1  = np.zeros(len(self.stocks)) 
+        # length index of the returns of the benchmark
+        self.core_eq_1 = np.zeros(len(self.stocks))
         for i in self.stocks:
             y = np.array(self.returns[i])
             X = np.array(self.rescaled_pc_scores)
@@ -214,8 +212,8 @@ class PCA(object):
                     "beta": model_i.params[1:],
                     "residuals": model_i.resid,
                 }
-                #Add Core equity factor 1 (the first beta of the regression) to the vector 
-                self.core_eq_1[i]  = self.pca_models[i]["beta"][0]
+                # Add Core equity factor 1 (the first beta of the regression) to the vector
+                self.core_eq_1[i] = self.pca_models[i]["beta"][0]
 
             except KeyError as e:
                 print(f"Error for stock {i}: {e}")
@@ -227,30 +225,40 @@ class PCA(object):
 
         return self.pca_models
 
-
     def optim_routine(self):
         cov = self.cov_matrix
         core_eq_1 = self.core_eq_1
 
         def objective(W):
             # calculate mean/variance of the portfolio
-            varp=np.dot(np.dot(W.T,cov),W)
-            #objective: min vol
-            util=varp**0.5
+            varp = np.dot(np.dot(W.T, cov), W)
+            # objective: min vol
+            util = varp**0.5
             return util
-        
-        n=len(cov)
+
+        n = len(cov)
         # initial conditions: equal weights
-        W=np.ones([n])/n             
+        W = np.ones([n]) / n
         # weights between 0%..100%: no shorts
-        b_=[(0.,1.) for i in range(n)]   
+        b_ = [(0.0, 1.0) for i in range(n)]
         # No leverage: unitary constraint (sum weights = 100%)
-        c_= [{'type':'eq', 'fun': lambda W: sum(W)-1. } , {'type':'ineq', 'fun': lambda W: W.T @ core_eq_1 - 1 = 0.}]
-        optimized= minimize(objective,W,(core_eq_1,cov), method='SLSQP',constraints=c_,bounds=b_,options={'maxiter': 100, 'ftol': 1e-08})
+        c_ = [
+            {"type": "eq", "fun": lambda W: sum(W) - 1.0},
+            {"type": "ineq", "fun": lambda W: W.T @ core_eq_1 - 1.0 == 0.0},
+        ]
+
+        optimized = minimize(
+            objective,
+            W,
+            (core_eq_1, cov),
+            method="SLSQP",
+            constraints=c_,
+            bounds=b_,
+            options={"maxiter": 100, "ftol": 1e-08},
+        )
         return optimized.x
 
-    
-    def core_equity_ptf(self): 
+    def core_equity_ptf(self):
         """
         Function that returns the weights of the core equity portfolio.
 
@@ -263,98 +271,11 @@ class PCA(object):
         self.core_equity_ptfs = {}
         self.core_equity_ptfs = self.optim_routine()
 
-        #Reformat the dictionary to a pandas dataframe with the columns being the stocks and the row being the weight
-        self.core_equity_ptfs = pd.DataFrame(data = self.core_equity_ptfs, columns = self.stocks)
+        # Reformat the dictionary to a pandas dataframe with the columns being the stocks and the row being the weight
+        self.core_equity_ptfs = pd.DataFrame(
+            data=self.core_equity_ptfs, columns=self.stocks
+        )
         self.core_equity_ptfs = self.core_equity_ptfs.T
-        self.core_equity_ptfs.columns = ['weights']
-        
+        self.core_equity_ptfs.columns = ["weights"]
+
         return self.core_equity_ptfs
-    
-
-    # # def compute_backtransformed_returns(self):
-    #     """
-
-    #         This function performs the inverse transformation to obtain back-transformed returns from the reduced number of pc scores.
-
-    #     Takes as input:
-
-    #         None;
-
-    #     Output:
-
-    #         None;
-
-    #     """
-
-    #     self.inv_eigenvectors = pd.DataFrame(
-    #         data=np.linalg.inv(np.matrix(self.eigenvectors)),
-    #         columns=self.stocks,
-    #         index=self.pc_indices,
-    #     )
-    #     self.inv_reduced_eigenvectors = self.inv_eigenvectors.iloc[: self.k, :]
-
-    #     self.backtransformed_yields = np.matrix(self.reduced_pc_scores) * np.matrix(
-    #         self.inv_reduced_eigenvectors
-    #     )
-    #     self.backtransformed_yields = pd.DataFrame(
-    #         data=self.backtransformed_yields,
-    #         columns=self.stocks,
-    #         index=self.reduced_pc_scores.index,
-    #     )
-
-    #     inverse_scaled_values = self.sc.inverse_transform(self.backtransformed_yields)
-    #     self.backtransformed_yields = pd.DataFrame(
-    #         inverse_scaled_values,
-    #         index=self.backtransformed_yields.index,
-    #         columns=self.backtransformed_yields.columns,
-    #     )
-
-    # def out_of_sample_projection(self, train_eigenvectors, test_yields):
-    #     """
-
-    #         Function that applies dimension reduction on the test returns using the eigenvectors computed on the train dataset.
-    #         Back-transforms the test returns into a lower-dimensional space.
-
-    #     Takes as input:
-
-    #         train_eigenvectors (pd.DataFrame): Pandas DataFrame containing the values of the eigenvectors computed on the train dataset;
-    #         test_yields (pd.DataFrame): Pandas DataFrame containing the values of the returns of the test;
-
-    #     Output:
-
-    #         backtransformed_yields (pd.DataFrame): Pandas DataFrame containing the values of the back-transformed returns.
-
-    #     """
-
-    #     scores_oos = np.matrix(test_yields) * np.matrix(train_eigenvectors)
-    #     scores_oos = pd.DataFrame(
-    #         data=scores_oos,
-    #         columns=self.pc_indices,
-    #         index=pd.to_datetime(test_yields.index),
-    #     )
-    #     reduced_scores_oos = scores_oos.iloc[:, : self.k]
-
-    #     inv_eigenvectors_oos = pd.DataFrame(
-    #         data=np.linalg.inv(np.matrix(train_eigenvectors)),
-    #         columns=self.stocks,
-    #         index=self.pc_indices,
-    #     )
-    #     inv_reduced_eigenvectors_oos = inv_eigenvectors_oos.iloc[: self.k, :]
-
-    #     backtransformed_yields = np.matrix(reduced_scores_oos) * np.matrix(
-    #         inv_reduced_eigenvectors_oos
-    #     )
-    #     backtransformed_yields = pd.DataFrame(
-    #         data=backtransformed_yields,
-    #         columns=self.stocks,
-    #         index=reduced_scores_oos.index,
-    #     )
-
-    #     inverse_scaled_values = self.sc.inverse_transform(backtransformed_yields)
-    #     backtransformed_yields = pd.DataFrame(
-    #         inverse_scaled_values,
-    #         index=backtransformed_yields.index,
-    #         columns=backtransformed_yields.columns,
-    #     )
-    #     return backtransformed_yields
-    # def core_portfolio_weights(self )
