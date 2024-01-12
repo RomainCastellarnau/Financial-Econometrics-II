@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-import sklearn as sk
+import cvxpy as cp
 from sklearn.preprocessing import StandardScaler
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.tools import add_constant
@@ -213,6 +213,25 @@ class PCA(object):
                 raise
 
         return self.pca_models
+
+
+    def port_minvol(core_eq, cov):
+        def objective(W, R, C):
+            # calculate mean/variance of the portfolio
+            varp=np.dot(np.dot(W.T,cov),W)
+            #objective: min vol
+            util=varp**0.5
+            return util
+        n=len(cov)
+        # initial conditions: equal weights
+        W=np.ones([n])/n                 
+        # weights between 0%..100%: no shorts
+        b_=[(0.,1.) for i in range(n)]   
+        # No leverage: unitary constraint (sum weights = 100%)
+        c_= ({'type':'eq', 'fun': lambda W: sum(W)-1. } , {'type':'ineq', 'fun': lambda W: np.dot(W.T , core_eq )}})
+        optimized=opt.minimize(objective,W,(mean,cov),
+                                        method='SLSQP',constraints=c_,bounds=b_,options={'maxiter': 100, 'ftol': 1e-08})
+        return optimized.x
 
     def optimisation_routine(self):
         """
