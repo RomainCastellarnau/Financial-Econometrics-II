@@ -194,7 +194,7 @@ class PCA(object):
 
         for i in self.stocks:
             y = np.array(self.returns[i])
-            X = np.array(self.reduced_pc_scores[i])
+            X = np.array(self.reduced_pc_scores)
             X = add_constant(X)  # Add a constant term for the intercept
 
             try:
