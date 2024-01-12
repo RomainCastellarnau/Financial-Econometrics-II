@@ -35,10 +35,10 @@ class PCA(object):
 
         """
 
-        self.benchmark = returns[
+        self.benchmark = returns.iloc[
             :, 0
         ]  # pd.DataFrame(returns[:, 0], index=returns[:, 0], columns=["benchmark"])
-        self.returns = returns[
+        self.returns = returns.iloc[
             :, 1:
         ]  # pd.DataFrame(returns[:, 1:], index=returns[:, 0], columns=stocks)
         self.scalers = {}  # Dictionary to store scalers
@@ -46,6 +46,7 @@ class PCA(object):
         self.k = k  # Number of Principal Components retained in the final model
 
         # Standard scale each column of the returns DataFrame and save scalers
+
         for col in returns.columns:
             if any(ticker in col for ticker in stocks):
                 scaler = StandardScaler()
@@ -53,7 +54,7 @@ class PCA(object):
                 self.scalers[col] = scaler
 
         self.std_returns = returns
-        self.std_returns = self.std_returns[:, 1:]
+        self.std_returns = self.std_returns.iloc[:, 1:]
         self.benchmark_vol = self.benchmark.std()
         self.compute_covariance_matrix()
         self.compute_eigenvectors()
