@@ -17,7 +17,7 @@ class PCA(object):
 
     """
 
-    def __init__(self, returns, stocks, k=None):
+    def __init__(self, returns, stocks, k):
         """
 
         Initializes the PCA object.
@@ -34,8 +34,6 @@ class PCA(object):
             - self.mapper (sklearn_pandas.DataFrameMapper()): sklearn_pandas instance used to standardize the stocks returns dataframe by columns;
 
         """
-        if k == None:
-            k = len(stocks)
 
         self.benchmark = returns[
             :, 0
