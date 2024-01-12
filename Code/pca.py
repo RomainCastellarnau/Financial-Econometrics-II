@@ -104,10 +104,10 @@ class PCA(object):
         self.std_cov_matrix = np.cov(self.std_cov_matrix, bias=True)
         self.cov_matrix = np.cov(self.cov_matrix, bias=True)
         self.std_cov_matrix = pd.DataFrame(
-            data=self.std_cov_matrix, columns=self.stocks, index=self.stocks
+            data=self.std_cov_matrix, columns=self.stocks[1:], index=self.stocks[1:]
         )
         self.cov_matrix = pd.DataFrame(
-            data=self.cov_matrix, columns=self.stocks, index=self.stocks
+            data=self.cov_matrix, columns=self.stocks[1:], index=self.stocks[1:]
         )
 
     def compute_eigenvectors(self):
@@ -278,3 +278,20 @@ class PCA(object):
         self.core_equity_ptfs.columns = ["weights"]
 
         return self.core_equity_ptfs
+    
+    def alpha_core_ptf(self): 
+        """
+        Function that returns an estimation of the alpha of the core equity portfolio.
+
+        Takes as input:
+            None;
+
+        Output:
+            alpha_core_ptf (int): Alpha of the core equity portfolio.
+        """
+
+        #Compute the return of the core equity portfolio
+        return_core_ptf = np.mean(self.core_equity_ptf()["weights"].T @ self.returns)
+
+
+    
