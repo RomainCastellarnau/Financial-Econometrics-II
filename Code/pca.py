@@ -56,10 +56,12 @@ class PCA(object):
 
         # Compute the covariance matrix of the stocks returns across the whole time horizon
         self.std_returns = returns
-        self.compute_covariance_matrix()
+        self.compute_covariance_matrix(std = True)
         self.compute_eigenvectors()
         self.compute_pc_scores()
         self.rescale_pc(self.benchmark.std())
+
+        self.compute_covariance_matrix(std = False)
 
     
     def select_pc_number(self, threshold):
@@ -85,10 +87,10 @@ class PCA(object):
                 k += 1
         return k
 
-    def compute_covariance_matrix(self):
+    def compute_covariance_matrix(self ,std = True):
         """
 
-            Calculates the covariance matrix of the stocks returns across the whole time horizon.
+            Calculates the covariance matrix of the standardized stocks returns across the whole time horizon.
 
         Takes as input:
 
@@ -99,12 +101,19 @@ class PCA(object):
             None;
 
         """
-
-        self.std_cov_matrix = np.array(self.std_returns).T
-        self.std_cov_matrix = np.cov(self.std_cov_matrix, bias=True)
-        self.std_cov_matrix = pd.DataFrame(
-            data=self.std_cov_matrix, columns=self.stocks, index=self.stocks
-        )
+        if std ==  True :
+            self.std_cov_matrix = np.array(self.std_returns).T
+            self.std_cov_matrix = np.cov(self.std_cov_matrix, bias=True)
+            self.std_cov_matrix = pd.DataFrame(
+                data=self.std_cov_matrix, columns=self.stocks, index=self.stocks
+            )
+        else :
+            self.cov_matrix = np.array(self.returns).T
+            self.cov_matrix = np.cov(self.cov_matrix, bias=True)
+            self.cov_matrix = pd.DataFrame(
+                data=self.cov_matrix, columns=self.stocks, index=self.stocks
+            )
+        
 
     def compute_eigenvectors(self):
         """
@@ -190,7 +199,8 @@ class PCA(object):
         """
 
         self.pca_models = {}
-
+        #length index of the returns of the benchmark 
+        self.core_eq_1  = np.zeros(len(self.stocks)) 
         for i in self.stocks:
             y = np.array(self.returns[i])
             X = np.array(self.rescaled_pc_scores)
@@ -204,6 +214,9 @@ class PCA(object):
                     "beta": model_i.params[1:],
                     "residuals": model_i.resid,
                 }
+                #Add Core equity factor 1 (the first beta of the regression) to the vector 
+                self.core_eq_1[i]  = self.pca_models[i]["beta"][0]
+
             except KeyError as e:
                 print(f"Error for stock {i}: {e}")
                 print("Columns in reduced_pc_scores:")
@@ -215,8 +228,11 @@ class PCA(object):
         return self.pca_models
 
 
-    def port_minvol(core_eq, cov):
-        def objective(W, R, C):
+    def optim_routine(self):
+        cov = self.cov_matrix
+        core_eq_1 = self.core_eq_1
+
+        def objective(W):
             # calculate mean/variance of the portfolio
             varp=np.dot(np.dot(W.T,cov),W)
             #objective: min vol
@@ -229,43 +245,11 @@ class PCA(object):
         # weights between 0%..100%: no shorts
         b_=[(0.,1.) for i in range(n)]   
         # No leverage: unitary constraint (sum weights = 100%)
-        c_= ({'type':'eq', 'fun': lambda W: sum(W)-1. } , {'type':'ineq', 'fun': lambda W: np.dot(W.T , core_eq )}})
-        optimized=opt.minimize(objective,W,(mean,cov),
-                                        method='SLSQP',constraints=c_,bounds=b_,options={'maxiter': 100, 'ftol': 1e-08})
+        c_= [{'type':'eq', 'fun': lambda W: sum(W)-1. } , {'type':'ineq', 'fun': lambda W: W.T @ core_eq_1 - 1 = 0.}]
+        optimized= minimize(objective,W,(core_eq_1,cov), method='SLSQP',constraints=c_,bounds=b_,options={'maxiter': 100, 'ftol': 1e-08})
         return optimized.x
 
-    def optimisation_routine(self):
-        """
-        Function that performs the optimisation routine to compute the weights of the core equity portfolio.
-
-        Takes as input:
-            None;
-
-        Output:
-            None;
-        """
-
-        # Compute the covariance matrix of the residuals
-        self.residuals_cov_matrix = np.cov(
-            np.array([self.pca_models[i]["residuals"] for i in self.stocks]), bias=True
-        )
-        self.residuals_cov_matrix = pd.DataFrame(
-            data=self.residuals_cov_matrix,
-            columns=self.stocks,
-            index=self.stocks,
-        )
-
-        # # Compute the weights of the core equity portfolio
-        # self.core_equity_portfolio = (
-        #     np.linalg.inv(self.residuals_cov_matrix)
-        #     @ self.eigenvectors.iloc[:, : self.k]
-        # )
-        # self.core_equity_portfolio = pd.DataFrame(
-        #     data=self.core_equity_portfolio,
-        #     columns=self.pc_indices,
-        #     index=self.stocks,
-        # )
-
+    
     def core_equity_portfolio(self):
         """
         Compute the weights of the equity portfolio designed to replicate the first core equity factor,
