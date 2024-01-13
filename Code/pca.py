@@ -1,9 +1,9 @@
 import numpy as np
 import pandas as pd
-import cvxpy as cp
 from sklearn.preprocessing import StandardScaler
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.tools import add_constant
+from scipy.stats import norm
 from scipy.optimize import minimize
 
 
@@ -298,3 +298,58 @@ class PCA(object):
         alpha_core_ptf = return_core_ptf - return_benchmark
 
         return alpha_core_ptf
+
+    def simulate_alpha_impact(self, num_simulations=1000):
+        """
+        Simulate the impact of estimation errors in the covariance matrix on the alpha of the replicating portfolio.
+
+        Args:
+            num_simulations (int): Number of simulations to perform.
+
+        Returns:
+            tuple: Mean and 95% confidence interval of the estimated alpha.
+        """
+        alphas = []
+
+        # Ensure core equity portfolio weights are already computed
+        if not hasattr(self, "core_equity_ptfs"):
+            self.core_equity_ptf()
+
+        for _ in range(num_simulations):
+            # Perturb the covariance matrix within a confidence region (e.g., using a multivariate normal distribution)
+            perturbed_cov_matrix = self.perturb_cov_matrix()
+
+            # Re-compute the core equity portfolio weights using the perturbed covariance matrix
+            perturbed_weights = self.optim_routine(cov=perturbed_cov_matrix)
+
+            # Compute the alpha for the perturbed weights
+            return_core_ptf = np.mean(perturbed_weights.T @ self.returns)
+            return_benchmark = np.mean(self.benchmark)
+            alpha_core_ptf = return_core_ptf - return_benchmark
+
+            alphas.append(alpha_core_ptf)
+
+        # Calculate mean and confidence interval of alpha
+        mean_alpha = np.mean(alphas)
+        alpha_std = np.std(alphas)
+        confidence_interval = norm.interval(
+            0.95, loc=mean_alpha, scale=alpha_std / np.sqrt(num_simulations)
+        )
+
+        return mean_alpha, confidence_interval
+
+    def perturb_cov_matrix(self):
+        """
+        Perturb the covariance matrix within a confidence region.
+
+        Returns:
+            numpy.ndarray: Perturbed covariance matrix.
+        """
+        # You can implement a method to perturb the covariance matrix here
+        # For example, you can use a multivariate normal distribution with mean=original covariance and some covariance matrix representing estimation errors
+        # This is a simplified example; you may want to adjust it based on your specific needs
+        estimation_errors = np.random.normal(
+            loc=0, scale=0.01, size=self.cov_matrix.shape
+        )
+        perturbed_cov_matrix = self.cov_matrix + estimation_errors
+        return perturbed_cov_matrix
