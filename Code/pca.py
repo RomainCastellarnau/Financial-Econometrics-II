@@ -17,7 +17,7 @@ class PCA(object):
 
     """
 
-    def __init__(self, returns, stocks, k):
+    def __init__(self, returns, stocks, k=None):
         """
 
         Initializes the PCA object.
@@ -67,6 +67,7 @@ class PCA(object):
             Function that selects the number of Principal Components to retain in the final model.
             The number of Principal Components is selected by the user, and the function returns the number of Principal Components
             that explain at least the specified threshold of the variance of the data.
+            Kaiser Criterion / Elbow Method / Scree Plot can be used to select the number of Principal Components.
 
         Takes as input:
 
@@ -225,17 +226,15 @@ class PCA(object):
         return self.pca_models
 
     def optim_routine(self):
-        cov = self.cov_matrix
         core_eq_1 = self.core_eq_1
 
         def objective(W):
             # calculate mean/variance of the portfolio
-            varp = np.dot(np.dot(W.T, cov), W)
-            # objective: min vol
-            util = varp**0.5
+            util = np.dot(np.dot(W.T, self.cov_matrix), W)
+            # objective: min variance
             return util
 
-        n = len(cov)
+        n = len(self.cov_matrix)
         # initial conditions: equal weights
         W = np.ones([n]) / n
         # weights between 0%..100%: no shorts
@@ -249,7 +248,7 @@ class PCA(object):
         optimized = minimize(
             objective,
             W,
-            (core_eq_1, cov),
+            (core_eq_1, self.cov_matrix),
             method="SLSQP",
             constraints=c_,
             bounds=b_,
@@ -257,99 +256,99 @@ class PCA(object):
         )
         return optimized.x
 
-    def core_equity_ptf(self):
-        """
-        Function that returns the weights of the core equity portfolio.
+    # def core_equity_ptf(self):
+    #     """
+    #     Function that returns the weights of the core equity portfolio.
 
-        Takes as input:
-            None;
+    #     Takes as input:
+    #         None;
 
-        Output:
-            core_equity_ptf (dict): Dictionary containing the weights of the core equity portfolio.
-        """
-        self.core_equity_ptfs = {}
-        self.core_equity_ptfs = self.optim_routine()
+    #     Output:
+    #         core_equity_ptf (dict): Dictionary containing the weights of the core equity portfolio.
+    #     """
+    #     self.core_equity_ptfs = {}
+    #     self.core_equity_ptfs = self.optim_routine()
 
-        # Reformat the dictionary to a pandas dataframe with the columns being the stocks and the row being the weight
-        self.core_equity_ptfs = pd.DataFrame(
-            data=self.core_equity_ptfs, columns=self.stocks
-        )
-        self.core_equity_ptfs = self.core_equity_ptfs.T
-        self.core_equity_ptfs.columns = ["weights"]
+    #     # Reformat the dictionary to a pandas dataframe with the columns being the stocks and the row being the weight
+    #     self.core_equity_ptfs = pd.DataFrame(
+    #         data=self.core_equity_ptfs, columns=self.stocks
+    #     )
+    #     self.core_equity_ptfs = self.core_equity_ptfs.T
+    #     self.core_equity_ptfs.columns = ["weights"]
 
-        return self.core_equity_ptfs
+    #     return self.core_equity_ptfs
 
-    def alpha_core_ptf(self):
-        """
-        Calculate an estimation of the alpha of the core equity portfolio.
+    # def alpha_core_ptf(self):
+    #     """
+    #     Calculate an estimation of the alpha of the core equity portfolio.
 
-        Returns:
-            float: Alpha of the core equity portfolio.
-        """
-        # Ensure core equity portfolio weights are already computed
-        if not hasattr(self, "core_equity_ptfs"):
-            self.core_equity_ptf()
+    #     Returns:
+    #         float: Alpha of the core equity portfolio.
+    #     """
+    #     # Ensure core equity portfolio weights are already computed
+    #     if not hasattr(self, "core_equity_ptfs"):
+    #         self.core_equity_ptf()
 
-        # Compute the return of the core equity portfolio
-        return_core_ptf = np.mean(self.core_equity_ptfs["weights"].T @ self.returns)
-        # Compute the return of the benchmark
-        return_benchmark = np.mean(self.benchmark)
-        # Compute the alpha of the core equity portfolio
-        alpha_core_ptf = return_core_ptf - return_benchmark
+    #     # Compute the return of the core equity portfolio
+    #     return_core_ptf = np.mean(self.core_equity_ptfs["weights"].T @ self.returns)
+    #     # Compute the return of the benchmark
+    #     return_benchmark = np.mean(self.benchmark)
+    #     # Compute the alpha of the core equity portfolio
+    #     alpha_core_ptf = return_core_ptf - return_benchmark
 
-        return alpha_core_ptf
+    #     return alpha_core_ptf
 
-    def simulate_alpha_impact(self, num_simulations=1000):
-        """
-        Simulate the impact of estimation errors in the covariance matrix on the alpha of the replicating portfolio.
+    # def simulate_alpha_impact(self, num_simulations=1000):
+    #     """
+    #     Simulate the impact of estimation errors in the covariance matrix on the alpha of the replicating portfolio.
 
-        Args:
-            num_simulations (int): Number of simulations to perform.
+    #     Args:
+    #         num_simulations (int): Number of simulations to perform.
 
-        Returns:
-            tuple: Mean and 95% confidence interval of the estimated alpha.
-        """
-        alphas = []
+    #     Returns:
+    #         tuple: Mean and 95% confidence interval of the estimated alpha.
+    #     """
+    #     alphas = []
 
-        # Ensure core equity portfolio weights are already computed
-        if not hasattr(self, "core_equity_ptfs"):
-            self.core_equity_ptf()
+    #     # Ensure core equity portfolio weights are already computed
+    #     if not hasattr(self, "core_equity_ptfs"):
+    #         self.core_equity_ptf()
 
-        for _ in range(num_simulations):
-            # Perturb the covariance matrix within a confidence region (e.g., using a multivariate normal distribution)
-            perturbed_cov_matrix = self.perturb_cov_matrix()
+    #     for _ in range(num_simulations):
+    #         # Perturb the covariance matrix within a confidence region (e.g., using a multivariate normal distribution)
+    #         perturbed_cov_matrix = self.perturb_cov_matrix()
 
-            # Re-compute the core equity portfolio weights using the perturbed covariance matrix
-            perturbed_weights = self.optim_routine(cov=perturbed_cov_matrix)
+    #         # Re-compute the core equity portfolio weights using the perturbed covariance matrix
+    #         perturbed_weights = self.optim_routine(cov=perturbed_cov_matrix)
 
-            # Compute the alpha for the perturbed weights
-            return_core_ptf = np.mean(perturbed_weights.T @ self.returns)
-            return_benchmark = np.mean(self.benchmark)
-            alpha_core_ptf = return_core_ptf - return_benchmark
+    #         # Compute the alpha for the perturbed weights
+    #         return_core_ptf = np.mean(perturbed_weights.T @ self.returns)
+    #         return_benchmark = np.mean(self.benchmark)
+    #         alpha_core_ptf = return_core_ptf - return_benchmark
 
-            alphas.append(alpha_core_ptf)
+    #         alphas.append(alpha_core_ptf)
 
-        # Calculate mean and confidence interval of alpha
-        mean_alpha = np.mean(alphas)
-        alpha_std = np.std(alphas)
-        confidence_interval = norm.interval(
-            0.95, loc=mean_alpha, scale=alpha_std / np.sqrt(num_simulations)
-        )
+    #     # Calculate mean and confidence interval of alpha
+    #     mean_alpha = np.mean(alphas)
+    #     alpha_std = np.std(alphas)
+    #     confidence_interval = norm.interval(
+    #         0.95, loc=mean_alpha, scale=alpha_std / np.sqrt(num_simulations)
+    #     )
 
-        return mean_alpha, confidence_interval
+    #     return mean_alpha, confidence_interval
 
-    def perturb_cov_matrix(self):
-        """
-        Perturb the covariance matrix within a confidence region.
+    # def perturb_cov_matrix(self):
+    #     """
+    #     Perturb the covariance matrix within a confidence region.
 
-        Returns:
-            numpy.ndarray: Perturbed covariance matrix.
-        """
-        # You can implement a method to perturb the covariance matrix here
-        # For example, you can use a multivariate normal distribution with mean=original covariance and some covariance matrix representing estimation errors
-        # This is a simplified example; you may want to adjust it based on your specific needs
-        estimation_errors = np.random.normal(
-            loc=0, scale=0.01, size=self.cov_matrix.shape
-        )
-        perturbed_cov_matrix = self.cov_matrix + estimation_errors
-        return perturbed_cov_matrix
+    #     Returns:
+    #         numpy.ndarray: Perturbed covariance matrix.
+    #     """
+    #     # You can implement a method to perturb the covariance matrix here
+    #     # For example, you can use a multivariate normal distribution with mean=original covariance and some covariance matrix representing estimation errors
+    #     # This is a simplified example; you may want to adjust it based on your specific needs
+    #     estimation_errors = np.random.normal(
+    #         loc=0, scale=0.01, size=self.cov_matrix.shape
+    #     )
+    #     perturbed_cov_matrix = self.cov_matrix + estimation_errors
+    #     return perturbed_cov_matrix
