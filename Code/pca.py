@@ -1,11 +1,14 @@
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
 from sklearn.preprocessing import StandardScaler
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.tools import add_constant
-from scipy.stats import norm
 from scipy.optimize import minimize
 from statsmodels.multivariate.pca import PCA as smPCA
+
+sns.set_style("darkgrid")
 
 
 class PCA(object):
@@ -37,12 +40,10 @@ class PCA(object):
             - cov_matrix (pd.DataFrame): Pandas DataFrame containing the covariance matrix of the returns;
             - full_model (statsmodels.multivariate.pca.PCA): PCA model computed on the standardized returns;
             - eigenvalues (np.ndarray): Eigenvalues of the standardized returns covariance matrix;
-            - eigenvectors (np.ndarray): Eigenvectors of the standardized returns covariance matrix;
             - pc_scores (pd.DataFrame): Pandas DataFrame containing the PC scores of the standardized returns;
             - pc_loadings (pd.DataFrame): Pandas DataFrame containing the PC loadings of the standardized returns;
             - rescaled_eigenvalues (np.ndarray): Rescaled eigenvalues of the standardized returns covariance matrix;
             - variance_explained (np.ndarray): Variance explained by each PC;
-            - rescaled_pc_scores (pd.DataFrame): Pandas DataFrame containing the rescaled PC scores of the standardized returns to the same volatility as that of the benchmark;
             - pca_models (Dict): Dictionary containing the OLS regression results of each stock returns on the K selected Principal Components;
             - core_eq_1_exp (np.ndarray): Vector containing the exposure of each stock to the core equity factor 1;
             - core_equity_w (np.ndarray): Vector containing the weights of the core equity portfolio;
@@ -59,22 +60,26 @@ class PCA(object):
         self.stocks = stocks[1:]  # List of stocks tickers on which PCA is performed
 
         # Standard scale each column of the returns DataFrame and save scalers
-
+        returns_std = pd.DataFrame(index=returns.index)
         for col in returns.columns:
             if any(ticker in col for ticker in stocks):
                 scaler = StandardScaler()
-                returns[col] = scaler.fit_transform(returns[col].values.reshape(-1, 1))
+                returns_std[col] = scaler.fit_transform(
+                    returns[col].values.reshape(-1, 1)
+                )
                 self.scalers[col] = scaler
 
-        self.std_returns = returns
+        self.std_returns = returns_std
         self.std_returns = self.std_returns.iloc[:, 1:]
         self.benchmark_vol = self.benchmark.std()
-        self.compute_covariance_matrix()
-        self.compute_model()  # Compute the PCA model
+        self.compute_covariance_matrix()  # Compute the covariance matrix of the returns not standardized
+        self.compute_full_model()  # Compute the PCA model with len(stocks) Principal Components
+        self.select_pc_number()  # Select the number of Principal Components to retain in the final model
+        self.check_loading_sign()  # Check the sign of the loadings of the first PC
         self.rescale_pc()  # Rescale the PC scores to the same volatility as that of the benchmark
         self.pca_model()  # Run an OLS regression of each stocks returns on the K selected Principal Components
         self.compute_core_equity_ptf()  # Compute the weights of the core equity portfolio
-        self.alpha_core_ptf()  # Calculate an estimation of the alpha of the core equity portfolio and its sharpe ratio
+        self.alpha_core_ptf()  # Calculate an estimation of the alpha of the core equity portfolio
 
     def compute_covariance_matrix(self):
         """
@@ -97,7 +102,7 @@ class PCA(object):
             data=self.cov_matrix, columns=self.stocks, index=self.stocks
         )
 
-    def compute_model(self):
+    def compute_full_model(self):
         """
         Function that computes the Principal Components model on the standardized stocks returns.
 
@@ -110,10 +115,7 @@ class PCA(object):
 
         self.full_model = smPCA(self.std_returns)
         self.eigenvalues = self.full_model.eigenvals
-        self.eigenvectors = self.full_model.eigenvecs
-        self.pc_scores = (
-            self.full_model.scores
-        )  # Dataframe of PC scores (n x len(stocks))
+        self.pc_scores = self.full_model.scores
         # rename columns
         self.pc_scores.columns = ["PC" + str(i) for i in range(1, len(self.stocks) + 1)]  # type: ignore
         self.pc_loadings = self.full_model.loadings  # PC loadings
@@ -121,6 +123,28 @@ class PCA(object):
         # Rescaled Eigenvalues
         self.rescaled_eigenvalues = self.eigenvalues / np.mean(self.eigenvalues)  # type: ignore
         self.variance_explained = self.rescaled_eigenvalues / self.rescaled_eigenvalues.sum()  # type: ignore
+
+    def check_loading_sign(self):
+        """
+
+        Function that checks the sign of the loadings of the first PC. If F1 the loading vector of the first PC
+        contains more than 50% of negative values, the sign of the first loading is flipped.
+
+        Takes as input:
+            None;
+
+        Output:
+            None;
+        """
+
+        pc_1_loading = self.pc_loadings["PC1"]  # type: ignore
+        if (
+            pc_1_loading[pc_1_loading < 0].count()
+            > pc_1_loading[pc_1_loading > 0].count()
+        ):
+            self.pc_loadings["PC1"] = -self.pc_loadings["PC1"]  # type: ignore
+        else:
+            pass
 
     def rescale_pc(self):
         """
@@ -135,41 +159,32 @@ class PCA(object):
         """
 
         # Rescale the PC scores to the same volatility as that of the benchmark
-        self.rescaled_pc_scores = (
+        self.pc_scores = (
             self.pc_scores * self.benchmark_vol / self.pc_scores.std()  # type: ignore
         )
 
-    # def select_pc_number(self):
-    #     """
-    #     Function that selects the number of Principal Components to retain in the final model.
-    #     The number of Principal Components is selected based on the Kaiser Criterion and Bai-Ng (2002) Criterion.
+    def select_pc_number(self):
+        """
+        Function that selects the number of Principal Components to retain in the final model.
+        The number of Principal Components is selected based on the Bai-Ng (2002) Criterion.
+        Then the full model is adapted so that it only contains the selected Principal Components.
 
-    #     Takes as input:
-    #         None;
-    #     Output:
-    #         k (int): The number of Principal Components retained in the final model.
-    #     """
+        Takes as input:
+            None;
+        Output:
+            None;
+        """
+        # Bai-Ng (2002) Criterion: Select based on the first 20 information criteria
+        ic_values = self.full_model.ic.iloc[0:20, :1]  # type: ignore
+        # Get the index corresponding to the minimum BIC value
+        k = np.argmin(ic_values) + 1  # type: ignore
 
-    #     threshold = 0.80  # Threshold for the variance explained
-
-    #     # Select the number of Principal Components based on the variance explained
-
-    #     # Select the number of Principal Components based on the Kaiser Criterion;
-    #     k_kaiser = self.full_model.ic.shape[1]  # type: ignore
-
-    #     # Bai-Ng (2002) Criterion: Select based on BIC
-    #     bic_values = self.full_model.ic
-
-    #     # Find the index corresponding to the minimum BIC value
-    #     k_bic = np.argmin(bic_values) + 1  # Adding 1 because the loop starts from 1
-
-    #     # Select the minimum between Kaiser and Bai-Ng
-    #     k = min(k_kaiser, k_bic)
-
-    #     # Ensure that k is at least 1
-    #     k = max(k, 1)
-
-    #     return k
+        # Adapt the full model so that it only contains the selected Principal Components
+        self.eigenvalues = self.eigenvalues[:k]  # type: ignore
+        self.pc_scores = self.pc_scores.iloc[:, :k]  # type: ignore
+        self.pc_loadings = self.pc_loadings.iloc[:, :k]  # type: ignore
+        self.rescaled_eigenvalues = self.rescaled_eigenvalues[:k]  # type: ignore
+        self.variance_explained = self.variance_explained[:k]  # type: ignore
 
     def pca_model(self):
         """
@@ -188,7 +203,7 @@ class PCA(object):
         self.core_eq_1_exp = np.zeros(len(self.stocks))
         for i, stock in enumerate(self.stocks):
             y = np.array(self.returns[stock])
-            X = np.array(self.rescaled_pc_scores)
+            X = np.array(self.pc_scores)
             X = add_constant(X)  # Add a constant term for the intercept
 
             try:
@@ -206,7 +221,7 @@ class PCA(object):
             except KeyError as e:
                 print(f"Error for stock {i}: {e}")
                 print("Columns in reduced_pc_scores:")
-                print(self.rescaled_pc_scores.columns.tolist())
+                print(self.pc_scores.columns.tolist())
                 print("Columns in returns:")
                 print(self.returns.columns.tolist())
                 raise
@@ -273,30 +288,67 @@ class PCA(object):
 
         Output:
             alpha_core_ptf (float): The alpha of the core equity portfolio;
-            sharpe_ratio (float): The sharpe ratio of the core equity portfolio;
+            comparative_perf (float): The comparative performance of the core equity portfolio to the benchmark;
+            return_core_ptf (pd.DataFrame): Pandas DataFrame containing the returns of the core equity portfolio;
+
         """
         # Ensure core equity portfolio weights are already computed
         if not hasattr(self, "core_equity_ptf"):
             self.compute_core_equity_ptf()
 
         # Compute the total return of the core equity portfolio since inception
-        self.return_core_ptf = (
+        self.total_return_core_ptf = (
             np.cumprod(1 + self.returns @ self.core_equity_ptf["weights"]) - 1
         )
 
+        self.return_core_ptf = self.returns @ self.core_equity_ptf["weights"]
+        self.return_benchmark = self.benchmark
+
+        # Compute the alpha
+        model = OLS(self.return_core_ptf, self.return_benchmark, hasconst=True).fit()
+        alpha_core_ptf = model.params[0]
+
         # Compute the total return of the index since inception (benchmark)
-        self.return_benchmark = np.cumprod(1 + self.benchmark) - 1
-        core_ptf_vol = np.sqrt(
+        self.total_return_benchmark = np.cumprod(1 + self.benchmark) - 1
+
+        # Compute the volatility of the core equity portfolio
+        self.core_ptf_vol = np.sqrt(
             self.core_equity_ptf["weights"].T
             @ self.cov_matrix
             @ self.core_equity_ptf["weights"]
         )
 
         # Compute the alpha of the core equity portfolio & its sharpe ratio
-        alpha_core_ptf = np.mean(self.return_core_ptf - self.return_benchmark)
-        sharpe_ratio = alpha_core_ptf / core_ptf_vol
-        return alpha_core_ptf, sharpe_ratio
+        comparative_perf = np.mean(
+            self.total_return_core_ptf - self.total_return_benchmark
+        )
 
+        self.alpha_core = alpha_core_ptf
+        self.comparative_perf = comparative_perf
+
+    def plot_compared_performance(self):
+        """
+        Plot the performance of the core equity portfolio and the benchmark.
+
+        Takes as input:
+            None;
+
+        Output:
+            None;
+        """
+        # Ensure core equity portfolio weights are already computed
+        if not hasattr(self, "core_equity_ptf"):
+            self.compute_core_equity_ptf()
+
+        # Plot the performance of the core equity portfolio and the benchmark
+        plt.figure(figsize=(10, 6))
+        plt.plot(self.total_return_core_ptf, label="Core Equity Portfolio")
+        plt.plot(self.total_return_benchmark, label="Benchmark")
+        plt.legend()
+        plt.title("Performance of the Core Equity Portfolio vs. Benchmark")
+        plt.xlabel("Date")
+        plt.ylabel("Cumulative Return")
+        plt.show()
 
     # def simulate_alpha_impact(self, num_simulations=1000):
     #     """
