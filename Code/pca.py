@@ -280,9 +280,13 @@ class PCA(object):
             self.compute_core_equity_ptf()
 
         # Compute the return of the core equity portfolio
-        return_core_ptf = np.mean(self.core_equity_ptf["weights"].T @ self.returns)
+        return_core_ptf = np.cumprod(
+            1 + self.core_equity_ptf["weights"].T @ self.returns
+        )
+
         # Compute the return of the benchmark
-        return_benchmark = np.mean(self.benchmark)
+        return_benchmark = np.cumprod(1 + self.benchmark)
+
         # Compute the alpha of the core equity portfolio
         alpha_core_ptf = return_core_ptf - return_benchmark
         sharpe_ratio = alpha_core_ptf / self.benchmark_vol
