@@ -56,7 +56,7 @@ class PCA(object):
             :, 1:
         ]  # pd.DataFrame(returns[:, 1:], index=returns[:, 0], columns=stocks)
         self.scalers = {}  # Dictionary to store scalers
-        self.stocks = stocks  # List of stocks tickers on which PCA is performed
+        self.stocks = stocks[1:]  # List of stocks tickers on which PCA is performed
 
         # Standard scale each column of the returns DataFrame and save scalers
 
@@ -73,8 +73,8 @@ class PCA(object):
         self.compute_model()  # Compute the PCA model
         self.rescale_pc()  # Rescale the PC scores to the same volatility as that of the benchmark
         self.pca_model()  # Run an OLS regression of each stocks returns on the K selected Principal Components
-        self.compute_core_equity_ptf()  # Compute the weights of the core equity portfolio
-        self.alpha_core_ptf()  # Calculate an estimation of the alpha of the core equity portfolio and its sharpe ratio
+        # self.compute_core_equity_ptf()  # Compute the weights of the core equity portfolio
+        # self.alpha_core_ptf()  # Calculate an estimation of the alpha of the core equity portfolio and its sharpe ratio
 
     def compute_covariance_matrix(self):
         """
@@ -94,7 +94,7 @@ class PCA(object):
         self.cov_matrix = np.array(self.returns).T
         self.cov_matrix = np.cov(self.cov_matrix, bias=True)
         self.cov_matrix = pd.DataFrame(
-            data=self.cov_matrix, columns=self.stocks[1:], index=self.stocks[1:]
+            data=self.cov_matrix, columns=self.stocks, index=self.stocks
         )
 
     def compute_model(self):
