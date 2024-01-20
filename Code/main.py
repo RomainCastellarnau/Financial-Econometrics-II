@@ -24,7 +24,6 @@ if __name__ == "__main__":
     my_data = model.returns
     cov = model.cov_matrix
     eigen_values = model.eigenvalues
-    eigen_vectors = model.eigenvectors
     variance_explained = model.variance_explained
     cumulative_variance_explained = variance_explained.cumsum()
     cumulative_variance_explained.plot.bar(figsize=(10, 6), rot=0)

@@ -175,7 +175,7 @@ class PCA(object):
             None;
         """
         # Bai-Ng (2002) Criterion: Select based on the first 20 information criteria
-        ic_values = self.full_model.ic.iloc[0:20, :1]  # type: ignore
+        ic_values = self.full_model.ic.iloc[0:20, 0]  # type: ignore
         # Get the index corresponding to the minimum BIC value
         k = np.argmin(ic_values) + 1  # type: ignore
 
@@ -221,7 +221,7 @@ class PCA(object):
             except KeyError as e:
                 print(f"Error for stock {i}: {e}")
                 print("Columns in reduced_pc_scores:")
-                print(self.pc_scores.columns.tolist())
+                print(self.pc_scores.columns.tolist())  # type: ignore
                 print("Columns in returns:")
                 print(self.returns.columns.tolist())
                 raise
@@ -290,7 +290,7 @@ class PCA(object):
             alpha_core_ptf (float): The alpha of the core equity portfolio;
             comparative_perf (float): The comparative performance of the core equity portfolio to the benchmark;
             return_core_ptf (pd.DataFrame): Pandas DataFrame containing the returns of the core equity portfolio;
-
+            rmse (float): The root mean squared error of the regression;
         """
         # Ensure core equity portfolio weights are already computed
         if not hasattr(self, "core_equity_ptf"):
@@ -304,9 +304,14 @@ class PCA(object):
         self.return_core_ptf = self.returns @ self.core_equity_ptf["weights"]
         self.return_benchmark = self.benchmark
 
-        # Compute the alpha
+        # Compute the alpha and the beta of the core equity portfolio using a simple OLS regression
         model = OLS(self.return_core_ptf, self.return_benchmark, hasconst=True).fit()
-        alpha_core_ptf = model.params[0]
+        self.alpha_core = model.params[0]
+        self.beta_core = model.params[1]
+
+        r_predicted = model.predict()
+        r_residuals = self.return_core_ptf - r_predicted
+        rmse = np.sqrt(np.mean(r_residuals**2))
 
         # Compute the total return of the index since inception (benchmark)
         self.total_return_benchmark = np.cumprod(1 + self.benchmark) - 1
@@ -323,8 +328,9 @@ class PCA(object):
             self.total_return_core_ptf - self.total_return_benchmark
         )
 
-        self.alpha_core = alpha_core_ptf
         self.comparative_perf = comparative_perf
+
+        return self.alpha_core, self.comparative_perf, self.return_core_ptf, rmse
 
     def plot_compared_performance(self):
         """
