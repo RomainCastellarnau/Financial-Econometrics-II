@@ -79,7 +79,6 @@ class PCA(object):
         self.rescale_pc()  # Rescale the PC scores to the same volatility as that of the benchmark
         self.pca_model()  # Run an OLS regression of each stocks returns on the K selected Principal Components
         self.compute_core_equity_ptf()  # Compute the weights of the core equity portfolio
-        self.alpha_core_ptf()  # Calculate an estimation of the alpha of the core equity portfolio
 
     def compute_covariance_matrix(self):
         """
@@ -343,13 +342,13 @@ class PCA(object):
             None;
         """
         # Ensure core equity portfolio weights are already computed
-        if not hasattr(self, "core_equity_ptf"):
-            self.compute_core_equity_ptf()
+        if not hasattr(self, "total_return_core_ptf"):
+            self.alpha_core_ptf()
 
         # Plot the performance of the core equity portfolio and the benchmark
         plt.figure(figsize=(10, 6))
-        plt.plot(self.total_return_core_ptf, label="Core Equity Portfolio")
-        plt.plot(self.total_return_benchmark, label="Benchmark")
+        plt.plot(self.total_return_core_ptf, label="Core Equity Portfolio Total Return")
+        plt.plot(self.total_return_benchmark, label="Benchmark Total Return")
         plt.legend()
         plt.title("Performance of the Core Equity Portfolio vs. Benchmark")
         plt.xlabel("Date")
