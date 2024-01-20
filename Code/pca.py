@@ -5,6 +5,7 @@ from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.tools import add_constant
 from scipy.stats import norm
 from scipy.optimize import minimize
+from statsmodels.multivariate.pca import PCA as smPCA
 
 
 class PCA(object):
@@ -17,7 +18,7 @@ class PCA(object):
 
     """
 
-    def __init__(self, returns, stocks, k=None):
+    def __init__(self, returns, stocks):
         """
 
         Initializes the PCA object.
@@ -43,7 +44,6 @@ class PCA(object):
         ]  # pd.DataFrame(returns[:, 1:], index=returns[:, 0], columns=stocks)
         self.scalers = {}  # Dictionary to store scalers
         self.stocks = stocks  # List of stocks tickers on which PCA is performed
-        self.k = k  # Number of Principal Components retained in the final model
 
         # Standard scale each column of the returns DataFrame and save scalers
 
@@ -57,33 +57,10 @@ class PCA(object):
         self.std_returns = self.std_returns.iloc[:, 1:]
         self.benchmark_vol = self.benchmark.std()
         self.compute_covariance_matrix()
-        self.compute_eigenvectors()
-        self.compute_pc_scores()
-        self.rescale_pc()
-
-    def select_pc_number(self, threshold):
-        """
-
-            Function that selects the number of Principal Components to retain in the final model.
-            The number of Principal Components is selected by the user, and the function returns the number of Principal Components
-            that explain at least the specified threshold of the variance of the data.
-            Kaiser Criterion / Elbow Method / Scree Plot can be used to select the number of Principal Components.
-
-        Takes as input:
-
-            threshold (float): The threshold of variance explained by the Principal Components retained in the final model;
-
-        Output:
-
-            k (int): The number of Principal Components retained in the final model;
-
-        """
-
-        k = 0
-        for i in range(self.eigenvalues.shape[0]):
-            if self.eigenvalues["eigenvalue_absolute"].iloc[i] >= threshold:
-                k += 1
-        return k
+        self.compute_model()
+        # self.compute_eigenvectors()
+        # self.compute_pc_scores()
+        # self.rescale_pc()
 
     def compute_covariance_matrix(self):
         """
@@ -111,150 +88,135 @@ class PCA(object):
             data=self.cov_matrix, columns=self.stocks[1:], index=self.stocks[1:]
         )
 
-    def compute_eigenvectors(self):
-        """
+    def compute_model(self):
+        self.full_model = smPCA(self.std_returns)
+        self.eigenvalues = self.full_model.eigenvals
+        self.eigenvectors = self.full_model.eigenvecs
+        self.pc_scores = self.full_model.scores  # Dataframe of PC scores (n x len(stocks))
+        #rename columns
+        self.pc_scores.columns = ["PC" + str(i) for i in range(1, len(self.stocks))]
+        self.pc_loadings = self.full_model.loadings  # PC loadings
+        self.pc_loadings.columns = ["PC" + str(i) for i in range(1, len(self.stocks))]
+        # Rescaled Eigenvalues
+        self.rescaled_eigenvalues = self.eigenvalues / np.mean(self.eigenvalues)  # type: ignore
+        self.variance_explained = self.rescaled_eigenvalues.cumsum() / self.rescaled_eigenvalues.sum()  # type: ignore
+    
+    # def select_pc_number(self, threshold):
+    #     """
+    #     Function that selects the number of Principal Components to retain in the final model.
+    #     The number of Principal Components is selected based on the Kaiser Criterion and Bai-Ng (2002) Criterion.
 
-            Functions that computes the Eigenvectors i.e. the vectors that maximize the variance of the data;
-            This function calculates the Eigenvectors. By definition these are the vectors that capture the maximum variance of the
-            underlying data, and can be found by minimizing the sum of projection length to the respective vector.
+    #     Takes as input:
+    #         max_factors (int): The maximum number of factors in the full model.
+    #         threshold (float): The threshold of variance explained by the Principal Components retained in the final model.
 
-        Takes as input:
+    #     Output:
+    #         k (int): The number of Principal Components retained in the final model.
+    #     """
 
-            None;
+    #     # Kaiser Criterion: Retain components with eigenvalues greater than or equal to 1
+    #     k_kaiser = np.sum(self.eigenvalues >= 1)
 
-        Output:
+    #     # Bai-Ng (2002) Criterion: Select based on BIC
+    #     bic_values = self.full_model.ic
 
-            None;
+    #     # Find the index corresponding to the minimum BIC value
+    #     k_bic = np.argmin(bic_values) + 1  # Adding 1 because the loop starts from 1
 
-        """
+    #     # Select the minimum between Kaiser and Bai-Ng
+    #     k = min(k_kaiser, k_bic)
 
-        eig = np.linalg.eig(self.std_cov_matrix)
-        self.pc_indices = [f"PC_{i}" for i in range(1, eig[0].shape[0] + 1)]
+    #     # Ensure that k is at least 1
+    #     k = max(k, 1)
 
-        self.eigenvalues = pd.DataFrame(
-            eig[0].real, columns=["eigenvalue"], index=self.pc_indices
-        )
-        self.eigenvalues["eigenvalue_relative"] = self.eigenvalues["eigenvalue"].apply(
-            lambda x: x / self.eigenvalues["eigenvalue"].sum()
-        )
-        self.eigenvalues["eigenvalue_absolute"] = self.eigenvalues[
-            "eigenvalue_relative"
-        ].cumsum()
+    #     return k
 
-        self.eigenvectors = pd.DataFrame(
-            eig[1].real, index=self.stocks, columns=self.pc_indices
-        )
-        self.reduced_eigenvectors = self.eigenvectors.iloc[:, : self.k]
+    # def rescale_pc(self):
+    #     """
+    #     Function that rescales the Principal Components to the same volatility as that of the benchmark.
 
-    def compute_pc_scores(self):
-        """
+    #     Takes as input:
+    #         None;
 
-            This function transforms the underlying data into the new dimensionality formed by the eigenvectors.
+    #     Output:
+    #         None;
+    #     """
 
-        Takes as input:
+    #     # Rescale the PC scores to the same volatility as that of the benchmark
+    #     self.rescaled_pc_scores = (
+    #         self.pc_scores * self.benchmark_vol / self.pc_scores.std()
+    #     )
 
-            None;
+    # def pca_model(self):
+    #     """
+    #     Function that returns a dictionary of linear models associated with each of the i stocks.
 
-        Output:
+    #     Takes as input:
+    #         None;
 
-            None;
+    #     Output:
+    #         pca_model (dict): Dictionary containing the PCA model.
+    #     """
 
-        """
+    #     self.pca_models = {}
+    #     # length index of the returns of the benchmark
+    #     self.core_eq_1 = np.zeros(len(self.stocks))
+    #     for i in self.stocks:
+    #         y = np.array(self.returns[i])
+    #         X = np.array(self.rescaled_pc_scores)
+    #         X = add_constant(X)  # Add a constant term for the intercept
 
-        self.pc_scores = np.matrix(self.returns) * np.matrix(self.eigenvectors)  # type: ignore
-        self.pc_scores = pd.DataFrame(
-            data=self.pc_scores,
-            columns=self.pc_indices,
-        )
-        self.pc_scores.index = pd.to_datetime(self.returns.index)  # type: ignore
-        self.reduced_pc_scores = self.pc_scores.iloc[:, : self.k]
+    #         try:
+    #             model_i = OLS(y, X, hasconst=True).fit()
+    #             self.pca_models[i] = {
+    #                 "model_result": model_i,
+    #                 "alpha": model_i.params[0],
+    #                 "beta": model_i.params[1:],
+    #                 "residuals": model_i.resid,
+    #             }
+    #             # Add Core equity factor 1 (the first beta of the regression) to the vector
+    #             self.core_eq_1[i] = self.pca_models[i]["beta"][0]
 
-    def rescale_pc(self):
-        """
-        Function that rescales the Principal Components to the same volatility as that of the benchmark.
+    #         except KeyError as e:
+    #             print(f"Error for stock {i}: {e}")
+    #             print("Columns in reduced_pc_scores:")
+    #             print(self.reduced_pc_scores.columns.tolist())
+    #             print("Columns in returns:")
+    #             print(self.returns.columns.tolist())
+    #             raise
 
-        Takes as input:
-            None;
+    #     return self.pca_models
 
-        Output:
-            None;
-        """
+    # def optim_routine(self):
+    #     core_eq_1 = self.core_eq_1
 
-        # Rescale the PC scores to the same volatility as that of the benchmark
-        self.rescaled_pc_scores = (
-            self.pc_scores * self.benchmark_vol / self.pc_scores.std()
-        )
+    #     def objective(W):
+    #         # calculate mean/variance of the portfolio
+    #         util = np.dot(np.dot(W.T, self.cov_matrix), W)
+    #         # objective: min variance
+    #         return util
 
-    def pca_model(self):
-        """
-        Function that returns a dictionary of linear models associated with each of the i stocks.
+    #     n = len(self.cov_matrix)
+    #     # initial conditions: equal weights
+    #     W = np.ones([n]) / n
+    #     # weights between 0%..100%: no shorts
+    #     b_ = [(0.0, 1.0) for i in range(n)]
+    #     # No leverage: unitary constraint (sum weights = 100%)
+    #     c_ = [
+    #         {"type": "eq", "fun": lambda W: sum(W) - 1.0},
+    #         {"type": "ineq", "fun": lambda W: W.T @ core_eq_1 - 1.0 == 0.0},
+    #     ]
 
-        Takes as input:
-            None;
-
-        Output:
-            pca_model (dict): Dictionary containing the PCA model.
-        """
-
-        self.pca_models = {}
-        # length index of the returns of the benchmark
-        self.core_eq_1 = np.zeros(len(self.stocks))
-        for i in self.stocks:
-            y = np.array(self.returns[i])
-            X = np.array(self.rescaled_pc_scores)
-            X = add_constant(X)  # Add a constant term for the intercept
-
-            try:
-                model_i = OLS(y, X, hasconst=True).fit()
-                self.pca_models[i] = {
-                    "model_result": model_i,
-                    "alpha": model_i.params[0],
-                    "beta": model_i.params[1:],
-                    "residuals": model_i.resid,
-                }
-                # Add Core equity factor 1 (the first beta of the regression) to the vector
-                self.core_eq_1[i] = self.pca_models[i]["beta"][0]
-
-            except KeyError as e:
-                print(f"Error for stock {i}: {e}")
-                print("Columns in reduced_pc_scores:")
-                print(self.reduced_pc_scores.columns.tolist())
-                print("Columns in returns:")
-                print(self.returns.columns.tolist())
-                raise
-
-        return self.pca_models
-
-    def optim_routine(self):
-        core_eq_1 = self.core_eq_1
-
-        def objective(W):
-            # calculate mean/variance of the portfolio
-            util = np.dot(np.dot(W.T, self.cov_matrix), W)
-            # objective: min variance
-            return util
-
-        n = len(self.cov_matrix)
-        # initial conditions: equal weights
-        W = np.ones([n]) / n
-        # weights between 0%..100%: no shorts
-        b_ = [(0.0, 1.0) for i in range(n)]
-        # No leverage: unitary constraint (sum weights = 100%)
-        c_ = [
-            {"type": "eq", "fun": lambda W: sum(W) - 1.0},
-            {"type": "ineq", "fun": lambda W: W.T @ core_eq_1 - 1.0 == 0.0},
-        ]
-
-        optimized = minimize(
-            objective,
-            W,
-            (core_eq_1, self.cov_matrix),
-            method="SLSQP",
-            constraints=c_,
-            bounds=b_,
-            options={"maxiter": 100, "ftol": 1e-08},
-        )
-        return optimized.x
+    #     optimized = minimize(
+    #         objective,
+    #         W,
+    #         (core_eq_1, self.cov_matrix),
+    #         method="SLSQP",
+    #         constraints=c_,
+    #         bounds=b_,
+    #         options={"maxiter": 100, "ftol": 1e-08},
+    #     )
+    #     return optimized.x
 
     # def core_equity_ptf(self):
     #     """
