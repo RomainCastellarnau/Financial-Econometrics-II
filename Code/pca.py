@@ -186,7 +186,7 @@ class PCA(object):
 
         self.pca_models = {}
         self.core_eq_1_exp = np.zeros(len(self.stocks))
-        for i , stock in enumerate(self.stocks):
+        for i, stock in enumerate(self.stocks):
             y = np.array(self.returns[stock])
             X = np.array(self.rescaled_pc_scores)
             X = add_constant(X)  # Add a constant term for the intercept
@@ -227,13 +227,13 @@ class PCA(object):
         # No leverage: unitary constraint (sum weights = 100%)
         c_ = [
             {"type": "eq", "fun": lambda W: sum(W) - 1.0},
-            {"type": "ineq", "fun": lambda W: W.T @ core_eq_1_exp - 1.0 == 0.0},
+            {"type": "eq", "fun": lambda W: W.T @ core_eq_1_exp - 1.0 == 0.0},
         ]
 
         optimized = minimize(
             objective,
             W,
-            (core_eq_1_exp, covariance_matrix),
+            args=(core_eq_1_exp, covariance_matrix),
             method="SLSQP",
             constraints=c_,
             bounds=b_,
