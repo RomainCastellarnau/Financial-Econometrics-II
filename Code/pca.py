@@ -96,14 +96,14 @@ class PCA(object):
             self.full_model.scores
         )  # Dataframe of PC scores (n x len(stocks))
         # rename columns
-        self.pc_scores.columns = ["PC" + str(i) for i in range(1, len(self.stocks))]
+        self.pc_scores.columns = ["PC" + str(i) for i in range(1, len(self.stocks))]  # type: ignore
         self.pc_loadings = self.full_model.loadings  # PC loadings
-        self.pc_loadings.columns = ["PC" + str(i) for i in range(1, len(self.stocks))]
+        self.pc_loadings.columns = ["PC" + str(i) for i in range(1, len(self.stocks))]  # type: ignore
         # Rescaled Eigenvalues
         self.rescaled_eigenvalues = self.eigenvalues / np.mean(self.eigenvalues)  # type: ignore
-        self.variance_explained = self.rescaled_eigenvalues.cumsum() / self.rescaled_eigenvalues.sum()  # type: ignore
+        self.variance_explained = self.rescaled_eigenvalues / self.rescaled_eigenvalues.sum()  # type: ignore
 
-    def create_reduce_model(self):
+    def select_pc_number(self):
         """
         Function that selects the number of Principal Components to retain in the final model.
         The number of Principal Components is selected based on the Kaiser Criterion and Bai-Ng (2002) Criterion.
@@ -114,9 +114,12 @@ class PCA(object):
             k (int): The number of Principal Components retained in the final model.
         """
 
-        
-        # Kaiser Criterion: Retain components with eigenvalues greater than or equal to 1
-        k_kaiser = np.sum(self.eigenvalues >= 1)
+        threshold = 0.80  # Threshold for the variance explained
+
+        # Select the number of Principal Components based on the variance explained
+
+        # Select the number of Principal Components based on the Kaiser Criterion;
+        k_kaiser = self.full_model.ic.shape[1]  # type: ignore
 
         # Bai-Ng (2002) Criterion: Select based on BIC
         bic_values = self.full_model.ic
