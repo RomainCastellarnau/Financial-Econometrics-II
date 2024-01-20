@@ -73,7 +73,7 @@ class PCA(object):
         self.compute_model()  # Compute the PCA model
         self.rescale_pc()  # Rescale the PC scores to the same volatility as that of the benchmark
         self.pca_model()  # Run an OLS regression of each stocks returns on the K selected Principal Components
-        # self.compute_core_equity_ptf()  # Compute the weights of the core equity portfolio
+        self.compute_core_equity_ptf()  # Compute the weights of the core equity portfolio
         # self.alpha_core_ptf()  # Calculate an estimation of the alpha of the core equity portfolio and its sharpe ratio
 
     def compute_covariance_matrix(self):
@@ -115,9 +115,9 @@ class PCA(object):
             self.full_model.scores
         )  # Dataframe of PC scores (n x len(stocks))
         # rename columns
-        self.pc_scores.columns = ["PC" + str(i) for i in range(1, len(self.stocks))]  # type: ignore
+        self.pc_scores.columns = ["PC" + str(i) for i in range(1, len(self.stocks) + 1)]  # type: ignore
         self.pc_loadings = self.full_model.loadings  # PC loadings
-        self.pc_loadings.columns = ["PC" + str(i) for i in range(1, len(self.stocks))]  # type: ignore
+        self.pc_loadings.columns = ["PC" + str(i) for i in range(1, len(self.stocks) + 1)]  # type: ignore
         # Rescaled Eigenvalues
         self.rescaled_eigenvalues = self.eigenvalues / np.mean(self.eigenvalues)  # type: ignore
         self.variance_explained = self.rescaled_eigenvalues / self.rescaled_eigenvalues.sum()  # type: ignore
@@ -186,21 +186,21 @@ class PCA(object):
 
         self.pca_models = {}
         self.core_eq_1_exp = np.zeros(len(self.stocks))
-        for i in self.stocks:
-            y = np.array(self.returns[i])
+        for i , stock in enumerate(self.stocks):
+            y = np.array(self.returns[stock])
             X = np.array(self.rescaled_pc_scores)
             X = add_constant(X)  # Add a constant term for the intercept
 
             try:
                 model_i = OLS(y, X, hasconst=True).fit()
-                self.pca_models[i] = {
+                self.pca_models[stock] = {
                     "model_result": model_i,
                     "alpha": model_i.params[0],
                     "beta": model_i.params[1:],
                     "residuals": model_i.resid,
                 }
                 # Add Core equity factor 1 (the first beta of the regression) to the vector
-                self.core_eq_1_exp[i] = self.pca_models[i]["beta"][0]
+                self.core_eq_1_exp[i] = self.pca_models[stock]["beta"][0]
 
             except KeyError as e:
                 print(f"Error for stock {i}: {e}")
