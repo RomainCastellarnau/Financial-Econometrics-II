@@ -92,60 +92,61 @@ class PCA(object):
         self.full_model = smPCA(self.std_returns)
         self.eigenvalues = self.full_model.eigenvals
         self.eigenvectors = self.full_model.eigenvecs
-        self.pc_scores = self.full_model.scores  # Dataframe of PC scores (n x len(stocks))
-        #rename columns
+        self.pc_scores = (
+            self.full_model.scores
+        )  # Dataframe of PC scores (n x len(stocks))
+        # rename columns
         self.pc_scores.columns = ["PC" + str(i) for i in range(1, len(self.stocks))]
         self.pc_loadings = self.full_model.loadings  # PC loadings
         self.pc_loadings.columns = ["PC" + str(i) for i in range(1, len(self.stocks))]
         # Rescaled Eigenvalues
         self.rescaled_eigenvalues = self.eigenvalues / np.mean(self.eigenvalues)  # type: ignore
         self.variance_explained = self.rescaled_eigenvalues.cumsum() / self.rescaled_eigenvalues.sum()  # type: ignore
-    
-    # def select_pc_number(self, threshold):
-    #     """
-    #     Function that selects the number of Principal Components to retain in the final model.
-    #     The number of Principal Components is selected based on the Kaiser Criterion and Bai-Ng (2002) Criterion.
 
-    #     Takes as input:
-    #         max_factors (int): The maximum number of factors in the full model.
-    #         threshold (float): The threshold of variance explained by the Principal Components retained in the final model.
+    def create_reduce_model(self):
+        """
+        Function that selects the number of Principal Components to retain in the final model.
+        The number of Principal Components is selected based on the Kaiser Criterion and Bai-Ng (2002) Criterion.
 
-    #     Output:
-    #         k (int): The number of Principal Components retained in the final model.
-    #     """
+        Takes as input:
+            None;
+        Output:
+            k (int): The number of Principal Components retained in the final model.
+        """
 
-    #     # Kaiser Criterion: Retain components with eigenvalues greater than or equal to 1
-    #     k_kaiser = np.sum(self.eigenvalues >= 1)
+        
+        # Kaiser Criterion: Retain components with eigenvalues greater than or equal to 1
+        k_kaiser = np.sum(self.eigenvalues >= 1)
 
-    #     # Bai-Ng (2002) Criterion: Select based on BIC
-    #     bic_values = self.full_model.ic
+        # Bai-Ng (2002) Criterion: Select based on BIC
+        bic_values = self.full_model.ic
 
-    #     # Find the index corresponding to the minimum BIC value
-    #     k_bic = np.argmin(bic_values) + 1  # Adding 1 because the loop starts from 1
+        # Find the index corresponding to the minimum BIC value
+        k_bic = np.argmin(bic_values) + 1  # Adding 1 because the loop starts from 1
 
-    #     # Select the minimum between Kaiser and Bai-Ng
-    #     k = min(k_kaiser, k_bic)
+        # Select the minimum between Kaiser and Bai-Ng
+        k = min(k_kaiser, k_bic)
 
-    #     # Ensure that k is at least 1
-    #     k = max(k, 1)
+        # Ensure that k is at least 1
+        k = max(k, 1)
 
-    #     return k
+        return k
 
-    # def rescale_pc(self):
-    #     """
-    #     Function that rescales the Principal Components to the same volatility as that of the benchmark.
+    def rescale_pc(self):
+        """
+        Function that rescales the Principal Components to the same volatility as that of the benchmark.
 
-    #     Takes as input:
-    #         None;
+        Takes as input:
+            None;
 
-    #     Output:
-    #         None;
-    #     """
+        Output:
+            None;
+        """
 
-    #     # Rescale the PC scores to the same volatility as that of the benchmark
-    #     self.rescaled_pc_scores = (
-    #         self.pc_scores * self.benchmark_vol / self.pc_scores.std()
-    #     )
+        # Rescale the PC scores to the same volatility as that of the benchmark
+        self.rescaled_pc_scores = (
+            self.pc_scores * self.benchmark_vol / self.pc_scores.std()  # type: ignore
+        )
 
     # def pca_model(self):
     #     """
