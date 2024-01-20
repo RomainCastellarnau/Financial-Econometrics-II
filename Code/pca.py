@@ -74,7 +74,7 @@ class PCA(object):
         self.rescale_pc()  # Rescale the PC scores to the same volatility as that of the benchmark
         self.pca_model()  # Run an OLS regression of each stocks returns on the K selected Principal Components
         self.compute_core_equity_ptf()  # Compute the weights of the core equity portfolio
-        # self.alpha_core_ptf()  # Calculate an estimation of the alpha of the core equity portfolio and its sharpe ratio
+        self.alpha_core_ptf()  # Calculate an estimation of the alpha of the core equity portfolio and its sharpe ratio
 
     def compute_covariance_matrix(self):
         """
@@ -198,6 +198,7 @@ class PCA(object):
                     "alpha": model_i.params[0],
                     "beta": model_i.params[1:],
                     "residuals": model_i.resid,
+                    "R2": model_i.rsquared,
                 }
                 # Add Core equity factor 1 (the first beta of the regression) to the vector
                 self.core_eq_1_exp[i] = self.pca_models[stock]["beta"][0]
@@ -213,13 +214,12 @@ class PCA(object):
     def optim_routine(self, covariance_matrix):
         core_eq_1_exp = self.core_eq_1_exp
 
-        def objective(W):
+        def objective(W, R, C):
             # calculate mean/variance of the portfolio
             util = np.dot(np.dot(W.T, covariance_matrix), W)
-            # objective: min variance
             return util
 
-        n = len(self.cov_matrix)
+        n = len(self.stocks)
         # initial conditions: equal weights
         W = np.ones([n]) / n
         # weights between 0%..100%: no shorts
@@ -227,13 +227,16 @@ class PCA(object):
         # No leverage: unitary constraint (sum weights = 100%)
         c_ = [
             {"type": "eq", "fun": lambda W: sum(W) - 1.0},
-            {"type": "eq", "fun": lambda W: W.T @ core_eq_1_exp - 1.0 == 0.0},
+            {"type": "eq", "fun": lambda W: W.T @ core_eq_1_exp - 1.0},
         ]
 
         optimized = minimize(
             objective,
             W,
-            args=(core_eq_1_exp, covariance_matrix),
+            args=(
+                core_eq_1_exp,
+                covariance_matrix,
+            ),  # Use args to pass additional arguments
             method="SLSQP",
             constraints=c_,
             bounds=b_,
@@ -256,11 +259,8 @@ class PCA(object):
 
         # Reformat the dictionary to a pandas dataframe with the columns being the stocks and the row being the weight
         self.core_equity_ptf = pd.DataFrame(
-            data=self.core_equity_w, columns=self.stocks
+            data=self.core_equity_w, columns=["weights"], index=self.stocks
         )
-
-        self.core_equity_ptf = self.core_equity_ptf.T
-        self.core_equity_ptf.columns = ["weights"]
 
         return self.core_equity_ptf
 
@@ -279,18 +279,24 @@ class PCA(object):
         if not hasattr(self, "core_equity_ptf"):
             self.compute_core_equity_ptf()
 
-        # Compute the return of the core equity portfolio
-        return_core_ptf = np.cumprod(
-            1 + self.core_equity_ptf["weights"].T @ self.returns
+        # Compute the total return of the core equity portfolio since inception
+        self.return_core_ptf = (
+            np.cumprod(1 + self.returns @ self.core_equity_ptf["weights"]) - 1
         )
 
-        # Compute the return of the benchmark
-        return_benchmark = np.cumprod(1 + self.benchmark)
+        # Compute the total return of the index since inception (benchmark)
+        self.return_benchmark = np.cumprod(1 + self.benchmark) - 1
+        core_ptf_vol = np.sqrt(
+            self.core_equity_ptf["weights"].T
+            @ self.cov_matrix
+            @ self.core_equity_ptf["weights"]
+        )
 
-        # Compute the alpha of the core equity portfolio
-        alpha_core_ptf = return_core_ptf - return_benchmark
-        sharpe_ratio = alpha_core_ptf / self.benchmark_vol
+        # Compute the alpha of the core equity portfolio & its sharpe ratio
+        alpha_core_ptf = np.mean(self.return_core_ptf - self.return_benchmark)
+        sharpe_ratio = alpha_core_ptf / core_ptf_vol
         return alpha_core_ptf, sharpe_ratio
+
 
     # def simulate_alpha_impact(self, num_simulations=1000):
     #     """
