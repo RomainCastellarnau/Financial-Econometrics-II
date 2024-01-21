@@ -419,7 +419,7 @@ class PCA(object):
             perturbed_weights = self.optim_routine(perturbed_cov_matrix)
 
             # Compute the alpha for the perturbed weights
-            return_core_ptf = perturbed_weights.T @ self.returns
+            return_core_ptf = self.returns @ perturbed_weights
             sim_perf = np.mean(return_core_ptf) * 12
             result = OLS(return_core_ptf, add_constant(self.return_benchmark)).fit()
             alpha_sim = result.params.iloc[0] * 12
