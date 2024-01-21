@@ -127,7 +127,7 @@ class PCA(object):
         """
 
         Function that checks the sign of the loadings of the first PC. If F1 the loading vector of the first PC
-        contains more than 50% of negative values, the sign of the first loading is flipped.
+        contains more than 50% of negative values, the sign of the first factor is flipped.
 
         Takes as input:
             None;
@@ -141,7 +141,7 @@ class PCA(object):
             pc_1_loading[pc_1_loading < 0].count()
             > pc_1_loading[pc_1_loading > 0].count()
         ):
-            self.pc_loadings["PC1"] = -self.pc_loadings["PC1"]  # type: ignore
+            self.pc_scores.iloc[:, 0] = self.pc_scores.iloc[:, 0].apply(lambda x: -x) # type: ignore
         else:
             pass
 
@@ -203,7 +203,7 @@ class PCA(object):
         for i, stock in enumerate(self.stocks):
             y = np.array(self.returns[stock])
             X = np.array(self.pc_scores)
-            X = add_constant(X)  # Add a constant term for the intercept
+            X = add_constant(X)
 
             try:
                 model_i = OLS(y, X, hasconst=True).fit()
@@ -238,7 +238,6 @@ class PCA(object):
         W = np.ones([n]) / n
         # weights between 0%..100%: no shorts
         b_ = [(0.0, 1.0) for i in range(n)]
-        # No leverage: unitary constraint (sum weights = 100%)
         c_ = [
             {"type": "eq", "fun": lambda W: sum(W) - 1.0},
             {"type": "eq", "fun": lambda W: W.T @ core_eq_1_exp - 1.0},
@@ -250,7 +249,7 @@ class PCA(object):
             args=(
                 core_eq_1_exp,
                 covariance_matrix,
-            ),  # Use args to pass additional arguments
+            ),
             method="SLSQP",
             constraints=c_,
             bounds=b_,
