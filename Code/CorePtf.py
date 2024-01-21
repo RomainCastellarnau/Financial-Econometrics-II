@@ -230,6 +230,12 @@ class CorePtf(object):
             None;
         """
 
+        if not hasattr(self, "pc_scores"):
+            self.compute_full_model()
+            self.select_pc_number()
+            self.check_loading_sign()
+            self.rescale_pc()
+
         self.pca_models = {}
         self.core_eq_1_exp = np.zeros(len(self.stocks))
         self.core_eq_2_exp = np.zeros(len(self.stocks))
