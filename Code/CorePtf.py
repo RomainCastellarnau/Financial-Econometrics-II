@@ -18,19 +18,19 @@ sns.set_style("darkgrid")
 class CorePtf(object):
     """
 
-    This class derives the principal components on a given data matrix containing stocks returns.
-    First the returns are standardized and then the PCA is performed on the standardized returns.
+    Class that computes the core equity portfolio and answers the questions of the assignment.
+    It also contains methods to plot the results.
 
     """
 
-    def __init__(self):
+    def __init__(self, dpi=300):
         """
 
         Initializes the CorePtf object and runs all the relevant methods to compute the core equity portfolio and answer the questions of the assignment.
 
         Takes as input:
 
-            - None;
+            - dpi (int): Dots per inch of the plots (default: 300);
 
         Methods:
 
@@ -52,6 +52,9 @@ class CorePtf(object):
             - plot_alpha_distribution: Plots the distribution of the alpha of the first core equity factor replicating portfolio;
             - plot_mean_vol_sim: Plots the mean return against the volatility of the simulated portfolios;
         """
+        self.dpi = dpi
+
+        # Set the path to the data
         path = os.path.join(os.path.dirname(os.getcwd()), "Data")
 
         # Load the data
@@ -548,17 +551,17 @@ class CorePtf(object):
                 mtick.FuncFormatter(lambda y, _: percentage_format.format(y))
             )
 
-    def plot_cumulative_variance_explained(self):
+    def plot_cumulative_variance_explained(self, savefig=False):
         """
         Plot the cumulative variance explained by the Principal Components (Full model)
 
         Takes as input:
-            None;
+            - savefig (bool): Whether to save the figure or not (default: False);
 
         Output:
             Matplotlib.plt plot;
         """
-        plt.figure(figsize=(10, 6))
+        plt.figure(figsize=(10, 6), dpi=self.dpi)
         plt.plot(
             range(1, len(self.cumulative_variance_explained) + 1),
             self.cumulative_variance_explained,
@@ -569,17 +572,20 @@ class CorePtf(object):
         self.format_axis_percentage(plt.gca(), axis="y")
         plt.show()
 
-    def plot_variance_explained(self):
+        if savefig:
+            plt.savefig("Cumulative Variance Explained by the Principal Components.png")
+
+    def plot_variance_explained(self, savefig=False):
         """
         Plot the variance explained by each Principal Component
 
         Takes as input:
-            None;
+            - savefig (bool): Whether to save the figure or not (default: False);
 
         Output:
             Matplotlib.plt bar plot;
         """
-        plt.figure(figsize=(10, 6))
+        plt.figure(figsize=(10, 6), dpi=self.dpi)
         plt.bar(
             x=range(1, len(self.variance_explained) + 1),
             height=self.variance_explained,
@@ -591,12 +597,16 @@ class CorePtf(object):
         self.format_axis_percentage(plt.gca(), axis="y")
         plt.show()
 
-    def plot_compared_performance(self, factor=1):
+        if savefig:
+            plt.savefig("Variance Explained by the selected Principal Components.png")
+
+    def plot_compared_performance(self, factor=1, savefig=False):
         """
         Plot the performance of the core equity portfolio and the benchmark.
 
         Takes as input:
-            None;
+            - factor (int): The factor replicating portfolio to plot (default: 1);
+            - savefig (bool): Whether to save the figure or not (default: False);
 
         Output:
             Matplotlib.plt plot;
@@ -616,7 +626,7 @@ class CorePtf(object):
                 np.cumprod(1 + self.returns @ self.core_equity_ptf_3["weights"]) - 1
             )
             # Plot the performance of the factors replicating portfolios and the benchmark
-            plt.figure(figsize=(10, 6))
+            plt.figure(figsize=(10, 6), dpi=self.dpi)
             plt.plot(
                 self.total_return_core_ptf,
                 label="First Core Equity Portfolio Total Return",
@@ -639,9 +649,13 @@ class CorePtf(object):
             self.format_axis_percentage(plt.gca(), axis="y")
             plt.show()
 
+            if savefig:
+                plt.savefig(
+                    "Total Performance of the Factors Replicating Portfolios vs. Benchmark.png"
+                )
         else:
             # Plot the performance of the first core equity portfolio and the benchmark
-            plt.figure(figsize=(10, 6))
+            plt.figure(figsize=(10, 6), dpi=self.dpi)
             plt.plot(
                 self.total_return_core_ptf,
                 label="First Core Equity Portfolio Total Return",
@@ -661,12 +675,17 @@ class CorePtf(object):
             self.format_axis_percentage(plt.gca(), axis="y")
             plt.show()
 
-    def plot_core_ptf_comp(self):
+            if savefig:
+                plt.savefig(
+                    "Performance of the First Core Equity Portfolio vs. Benchmark.png"
+                )
+
+    def plot_core_ptf_comp(self, savefig=False):
         """
         Pie chart showing the composition of the first core equity portfolio
 
         Takes as input:
-            None;
+            - savefig (bool): Whether to save the figure or not (default: False);
 
         Output:
             Matplotlib.plt pie chart;
@@ -676,7 +695,7 @@ class CorePtf(object):
 
         warnings.filterwarnings("ignore")
 
-        fig, ax = plt.subplots(figsize=(12, 8))
+        fig, ax = plt.subplots(figsize=(12, 8), dpi=self.dpi)
 
         wedges, texts, autotexts = ax.pie(
             self.core_equity_ptf["weights"],
@@ -692,13 +711,25 @@ class CorePtf(object):
         plt.title("Composition of the First Core Equity Portfolio")
         plt.show()
 
+        if savefig:
+            plt.savefig("Composition of the First Core Equity Portfolio.png")
+
         warnings.filterwarnings("default")
 
-    def plot_alpha_distribution(self):
+    def plot_alpha_distribution(self, savefig=False):
+        """
+        Plot the distribution of the alpha of the first core equity factor replicating portfolio
+
+        Takes as input:
+            - savefig (bool): Whether to save the figure or not (default: False);
+
+        Output:
+            Matplotlib.plt histogram;
+        """
         if not hasattr(self, "alphas"):
             self.simulate_alpha_impact()
 
-        plt.figure(figsize=(10, 6))
+        plt.figure(figsize=(10, 6), dpi=self.dpi)
         plt.hist(self.alphas, bins=50)
         plt.xlabel("Alpha of the First Factor Replicating Portfolio")
         plt.ylabel("Frequency")
@@ -713,12 +744,17 @@ class CorePtf(object):
         plt.legend([legend_text], loc="upper right")
         plt.show()
 
-    def plot_mean_vol_sim(self):
+        if savefig:
+            plt.savefig(
+                "Distribution of the Alpha of the First Factor Replicating Portfolio.png"
+            )
+
+    def plot_mean_vol_sim(self, savefig=False):
         """
         Plot the mean return and volatility of the simulated portfolios
 
         Takes as input:
-            None;
+            - savefig (bool): Whether to save the figure or not (default: False);
 
         Output:
             Matplotlib.plt scatter plot;
@@ -726,10 +762,13 @@ class CorePtf(object):
         if not hasattr(self, "sim_ptf_returns"):
             self.simulate_alpha_impact()
 
-        plt.figure(figsize=(10, 6))
+        plt.figure(figsize=(10, 6), dpi=self.dpi)
         plt.scatter(self.sim_ptf_vol, self.sim_ptf_returns)
         plt.xlabel("Volatility (Annualized)")
         plt.ylabel("Mean Return (Annualized)")
         plt.title("Mean Return vs. Volatility of the Simulated Portfolios")
         self.format_axis_percentage(plt.gca(), axis="both")
         plt.show()
+
+        if savefig:
+            plt.savefig("Mean Return vs. Volatility of the Simulated Portfolios.png")
