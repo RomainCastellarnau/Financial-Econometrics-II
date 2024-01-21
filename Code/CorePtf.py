@@ -123,9 +123,6 @@ class CorePtf(object):
         self.select_pc_number()  # Select the number of Principal Components to retain in the final model
         self.check_loading_sign()  # Check the sign of the loadings of the first PC
         self.rescale_pc()  # Rescale the PC scores to the same volatility as that of the benchmark
-        self.pca_model()  # Run an OLS regression of each stocks returns on the K selected Principal Components
-        self.compute_core_equity_ptf()  # Compute the weights of the core equity portfolio
-        self.alpha_core_ptf()  # Compute the alpha of the core equity portfolio
 
     def compute_covariance_matrix(self):
         """
@@ -325,6 +322,10 @@ class CorePtf(object):
         Output:
             core_equity_ptf (pd.DataFrame): Pandas DataFrame containing the weights of the core equity portfolio (First factor replacing portfolio);
         """
+
+        # Ensure the PCA model is already computed
+        if not hasattr(self, "core_eq_1_exp"):
+            self.pca_model()
 
         self.core_equity_w = np.array(self.optim_routine(self.cov_matrix))
 
