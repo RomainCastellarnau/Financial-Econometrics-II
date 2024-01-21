@@ -24,11 +24,24 @@ class PCA(object):
     def __init__(self):
         """
 
-        Initializes the PCA object.
+        Initializes the PCA object and runs all the relevant methods to compute the core equity portfolio.
 
         Takes as input:
 
             - None;
+
+        Methods:
+
+            - compute_covariance_matrix: Calculates the covariance matrix of the stocks returns across the whole time horizon;
+            - compute_full_model: Computes the Principal Components model on the standardized stocks returns;
+            - select_pc_number: Selects the number of Principal Components to retain in the final model;
+            - check_loading_sign: Checks the sign of the loadings of the first PC. If F1 the loading vector of the first PC contains more than 50% of negative values, the sign of the first factor is flipped;
+            - rescale_pc: Rescales the Principal Components to the same volatility as that of the benchmark;
+            - pca_model: Runs an OLS regression of each stocks returns on the K selected Principal Components an extracts the senstivity of each stock to the core equity factor 1;
+            - compute_core_equity_ptf: Computes the weights of the core equity portfolio;
+            - alpha_core_ptf: Computes the alpha of the core equity portfolio as well as other performance metrics;
+            - plot_compared_performance: Plots the performance of the core equity portfolio and the benchmark;
+            - simulate_alpha_impact(n_sim): Simulates the impact of estimation errors in the covariance matrix on the alpha of the replicating portfolio;
 
         Variables list:
 
@@ -49,6 +62,16 @@ class PCA(object):
             - core_eq_1_exp (np.ndarray): Vector containing the exposure of each stock to the core equity factor 1;
             - core_equity_w (np.ndarray): Vector containing the weights of the core equity portfolio;
             - core_equity_ptf (pd.DataFrame): Pandas DataFrame containing the weights of the core equity portfolio (Equity Portfolio replicating the first equity factor);
+            - alpha_core (float): Alpha of the core equity portfolio;
+            - beta_core (float): Beta of the core equity portfolio;
+            - total_return_core_ptf (np.ndarray): Vector containing the total return of the core equity portfolio since inception;
+            - total_return_benchmark (np.ndarray): Vector containing the total return of the benchmark since inception;
+            - core_ptf_vol (float): Volatility of the core equity portfolio;
+            - comparative_perf (float): Comparative performance of the core equity portfolio relative to the benchmark;
+            - ptf_stats (Dict): Dictionary containing the performance metrics of the core equity portfolio;
+            - mean_alpha (float): Mean alpha of the replicating portfolio;
+            - alpha_std (float): Standard deviation of the alpha of the replicating portfolio;
+            - alpha_confidence_interval (Tuple): Tuple containing the confidence interval of the alpha of the replicating portfolio;
         """
         path = os.path.join(os.path.dirname(os.getcwd()), "Data")
 
