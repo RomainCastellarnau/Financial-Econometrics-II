@@ -575,10 +575,12 @@ class CorePtf(object):
         plt.ylabel("Cumulative Variance Explained")
         plt.title("Cumulative Variance Explained by the Principal Components")
         self.format_axis_percentage(plt.gca(), axis="y")
-        plt.show()
-
         if savefig:
-            plt.savefig("Cumulative Variance Explained by the Principal Components.png")
+            plt.savefig(
+                "Cumulative Variance Explained by the Principal Components.png",
+                dpi=self.dpi,
+            )
+        plt.show()
 
     def plot_variance_explained(self, savefig=False):
         """
@@ -599,10 +601,12 @@ class CorePtf(object):
         plt.ylabel("Variance Explained")
         plt.title("Variance Explained by each selected Principal Component")
         self.format_axis_percentage(plt.gca(), axis="y")
-        plt.show()
-
         if savefig:
-            plt.savefig("Variance Explained by the selected Principal Components.png")
+            plt.savefig(
+                "Variance Explained by the selected Principal Components.png",
+                dpi=self.dpi,
+            )
+        plt.show()
 
     def plot_compared_performance(self, factor=1, savefig=False):
         """
@@ -651,12 +655,13 @@ class CorePtf(object):
             plt.xlabel("Date")
             plt.ylabel("Cumulative Return")
             self.format_axis_percentage(plt.gca(), axis="y")
-            plt.show()
-
             if savefig:
                 plt.savefig(
-                    "Total Performance of the Factors Replicating Portfolios vs. Benchmark.png"
+                    "Total Performance of the Factors Replicating Portfolios vs. Benchmark.png",
+                    dpi=self.dpi,
                 )
+            plt.show()
+
         else:
             # Plot the performance of the first core equity portfolio and the benchmark
             plt.figure(figsize=(10, 6), dpi=self.dpi)
@@ -677,12 +682,12 @@ class CorePtf(object):
             plt.xlabel("Date")
             plt.ylabel("Cumulative Return")
             self.format_axis_percentage(plt.gca(), axis="y")
-            plt.show()
-
             if savefig:
                 plt.savefig(
-                    "Performance of the First Core Equity Portfolio vs. Benchmark.png"
+                    "Performance of the First Core Equity Portfolio vs. Benchmark.png",
+                    dpi=self.dpi,
                 )
+            plt.show()
 
     def plot_core_ptf_comp(self, savefig=False):
         """
@@ -713,10 +718,11 @@ class CorePtf(object):
             text.set_fontsize(6)
 
         plt.title("Composition of the First Core Equity Portfolio")
-        plt.show()
-
         if savefig:
-            plt.savefig("Composition of the First Core Equity Portfolio.png")
+            plt.savefig(
+                "Composition of the First Core Equity Portfolio.png", dpi=self.dpi
+            )
+        plt.show()
 
         warnings.filterwarnings("default")
 
@@ -746,12 +752,12 @@ class CorePtf(object):
             + f"{self.alpha_std:.{2}%}"
         )
         plt.legend([legend_text], loc="upper right")
-        plt.show()
-
         if savefig:
             plt.savefig(
-                "Distribution of the Alpha of the First Factor Replicating Portfolio.png"
+                "Distribution of the Alpha of the First Factor Replicating Portfolio.png",
+                dpi=self.dpi,
             )
+        plt.show()
 
     def plot_mean_vol_sim(self, savefig=False):
         """
@@ -772,7 +778,9 @@ class CorePtf(object):
         plt.ylabel("Mean Return (Annualized)")
         plt.title("Mean Return vs. Volatility of the Simulated Portfolios")
         self.format_axis_percentage(plt.gca(), axis="both")
-        plt.show()
-
         if savefig:
-            plt.savefig("Mean Return vs. Volatility of the Simulated Portfolios.png")
+            plt.savefig(
+                "Mean Return vs. Volatility of the Simulated Portfolios.png",
+                dpi=self.dpi,
+            )
+        plt.show()
