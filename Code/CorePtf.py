@@ -170,6 +170,7 @@ class CorePtf(object):
         # Rescaled Eigenvalues
         self.rescaled_eigenvalues = self.eigenvalues / np.mean(self.eigenvalues)  # type: ignore
         self.variance_explained = self.rescaled_eigenvalues / self.rescaled_eigenvalues.sum()  # type: ignore
+        self.cumulative_variance_explained = np.cumsum(self.variance_explained)  # type: ignore
 
     def check_loading_sign(self):
         """
@@ -547,7 +548,7 @@ class CorePtf(object):
 
         return higher_factor_ptfs
 
-    def format_axis_percentage(self, ax, axis="both", precision=3):
+    def format_axis_percentage(self, ax, axis="both", precision=1):
         """
         Formats the axis ticks in percentage with a specified precision.
 
@@ -569,6 +570,27 @@ class CorePtf(object):
                 mtick.FuncFormatter(lambda y, _: percentage_format.format(y))
             )
 
+    def plot_cumulative_variance_explained(self):
+        """
+        Plot the cumulative variance explained by the Principal Components (Full model)
+
+        Takes as input:
+            None;
+
+        Output:
+            Matplotlib.plt plot;
+        """
+        plt.figure(figsize=(10, 6))
+        plt.plot(
+            range(1, len(self.cumulative_variance_explained) + 1),
+            self.cumulative_variance_explained,
+        )
+        plt.xlabel("Principal Components")
+        plt.ylabel("Cumulative Variance Explained")
+        plt.title("Cumulative Variance Explained by the Principal Components")
+        self.format_axis_percentage(plt.gca(), axis="y")
+        plt.show()
+
     def plot_variance_explained(self):
         """
         Plot the variance explained by each Principal Component
@@ -584,7 +606,8 @@ class CorePtf(object):
             x=range(1, len(self.variance_explained) + 1),
             height=self.variance_explained,
         )
-        plt.xlabel("Principal Component")
+        plt.xticks(range(1, len(self.variance_explained) + 1), ["PC1", "PC2", "PC3"])
+        plt.xlabel("Principal Components")
         plt.ylabel("Variance Explained")
         plt.title("Variance Explained by each Principal Component")
         self.format_axis_percentage(plt.gca(), axis="y")
@@ -646,24 +669,19 @@ class CorePtf(object):
                 label="First Core Equity Portfolio Total Return",
             )
             plt.plot(self.total_return_benchmark, label="Benchmark Total Return (SX5E)")
+            plt.fill_between(
+                self.total_return_core_ptf.index,
+                self.total_return_core_ptf,
+                self.total_return_benchmark,  # type: ignore
+                color="firebrick",
+                alpha=0.1,
+            )
             plt.legend()
             plt.title("Performance of the Core Equity Portfolio vs. Benchmark")
             plt.xlabel("Date")
             plt.ylabel("Cumulative Return")
             self.format_axis_percentage(plt.gca(), axis="y")
             plt.show()
-
-    def plot_alpha_distribution(self):
-        if not hasattr(self, "alphas"):
-            self.simulate_alpha_impact()
-
-        plt.figure(figsize=(10, 6))
-        plt.hist(self.alphas, bins=50)
-        plt.xlabel("Alpha of the First Factor Replicating Portfolio")
-        plt.ylabel("Frequency")
-        plt.title("Distribution of the Alpha of the First Factor Replicating Portfolio")
-        self.format_axis_percentage(plt.gca(), axis="x")
-        plt.show()
 
     def plot_core_ptf_comp(self):
         """
@@ -693,6 +711,25 @@ class CorePtf(object):
 
         warnings.filterwarnings("default")
 
+    def plot_alpha_distribution(self):
+        if not hasattr(self, "alphas"):
+            self.simulate_alpha_impact()
+
+        plt.figure(figsize=(10, 6))
+        plt.hist(self.alphas, bins=50)
+        plt.xlabel("Alpha of the First Factor Replicating Portfolio")
+        plt.ylabel("Frequency")
+        plt.title("Distribution of the Alpha of the First Factor Replicating Portfolio")
+        self.format_axis_percentage(plt.gca(), axis="x")
+        legend_text = (
+            r"$\mu_{\hat{\alpha}} = $"
+            + f"{self.mean_alpha:.{3}%}\n"
+            + r"$\sigma_{\hat{\alpha}} = $"
+            + f"{self.alpha_std:.{3}%}"
+        )
+        plt.legend([legend_text], loc="upper right")
+        plt.show()
+
     def plot_mean_vol_sim(self):
         """
         Plot the mean return and volatility of the simulated portfolios
@@ -708,8 +745,8 @@ class CorePtf(object):
 
         plt.figure(figsize=(10, 6))
         plt.scatter(self.sim_ptf_vol, self.sim_ptf_returns)
-        plt.xlabel("Volatility")
-        plt.ylabel("Mean Return")
+        plt.xlabel("Volatility (Annualized)")
+        plt.ylabel("Mean Return (Annualized)")
         plt.title("Mean Return vs. Volatility of the Simulated Portfolios")
         self.format_axis_percentage(plt.gca(), axis="both")
         plt.show()
