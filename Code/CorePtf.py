@@ -59,7 +59,7 @@ class CorePtf(object):
 
         # Load the data
         returns = (
-            pd.read_excel(os.path.join(path, "Data.xlsx"), sheet_name="RETURNS")
+            pd.read_excel(os.path.join(path, "DATA.xlsx"), sheet_name="RETURNS")
             .rename(columns={"Unnamed: 0": "Date"})
             .set_index("Date")
         )
@@ -163,6 +163,7 @@ class CorePtf(object):
         """
 
         pc_1_loading = self.pc_loadings["PC1"]  # type: ignore
+
         if (
             pc_1_loading[pc_1_loading < 0].count()
             > pc_1_loading[pc_1_loading > 0].count()
