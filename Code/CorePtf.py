@@ -54,7 +54,7 @@ class CorePtf(object):
         """
         self.dpi = dpi
 
-        # Set the path to the data
+        # Set the path to the data folder
         path = os.path.join(os.path.dirname(os.getcwd()), "Data")
 
         # Load the data
