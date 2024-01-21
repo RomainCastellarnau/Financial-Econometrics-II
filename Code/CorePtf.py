@@ -489,8 +489,12 @@ class CorePtf(object):
             "confidence interval": self.alpha_confidence_interval,
         }
         # Round the results to 4 decimals
-        for key in self.alpha_stats:
-            self.alpha_stats[key] = round(self.alpha_stats[key], 4)
+        self.alpha_stats = {
+            key: round(value, 4)
+            if not isinstance(value, tuple)
+            else tuple(round(v, 4) for v in value)
+            for key, value in self.alpha_stats.items()
+        }
 
         return self.alpha_stats
 
