@@ -372,11 +372,10 @@ class CorePtf(object):
         )
 
         self.return_core_ptf = self.returns @ self.core_equity_ptf["weights"]
-        self.return_benchmark = self.benchmark
 
         # Compute the alpha and the beta of the core equity portfolio using a simple OLS regression
         model = OLS(
-            self.return_core_ptf, add_constant(self.return_benchmark), hasconst=True
+            self.return_core_ptf, add_constant(self.benchmark), hasconst=True
         ).fit()
         self.alpha_core = model.params.iloc[0] * 12  # Annualized alpha
         self.beta_core = model.params.iloc[1]
@@ -449,7 +448,7 @@ class CorePtf(object):
             num_simulations (int): Number of simulations to perform;
 
         Output:
-            alpha_stats (Dict): Dictionary containing the mean, standard deviation and confidence interval of the alpha of the replicating portfolio;
+            self.alpha_stats (Dict): Dictionary containing the mean, standard deviation and confidence interval of the alpha of the replicating portfolio;
         """
 
         # Ensure core equity portfolio weights are already computed
@@ -471,7 +470,7 @@ class CorePtf(object):
             # Compute the alpha for the perturbed weights
             return_core_ptf = self.returns @ perturbed_weights
             sim_perf = np.mean(return_core_ptf) * 12
-            result = OLS(return_core_ptf, add_constant(self.return_benchmark)).fit()
+            result = OLS(return_core_ptf, add_constant(self.benchmark)).fit()
             alpha_sim = result.params.iloc[0] * 12
 
             alphas.append(alpha_sim)
@@ -479,18 +478,21 @@ class CorePtf(object):
 
         # Calculate mean and confidence interval of alpha
         self.mean_alpha = np.mean(alphas)
-        self.alpha_std = np.std(alphas)
+        self.alpha_std = np.std(alphas) * np.sqrt(12)
         self.alpha_confidence_interval = norm.interval(
             0.95, loc=self.mean_alpha, scale=self.alpha_std / np.sqrt(num_simulations)
         )
 
-        alpha_stats = {
+        self.alpha_stats = {
             "mean": self.mean_alpha,
             "std": self.alpha_std,
             "confidence interval": self.alpha_confidence_interval,
         }
+        # Round the results to 4 decimals
+        for key in self.alpha_stats:
+            self.alpha_stats[key] = round(self.alpha_stats[key], 4)
 
-        return alpha_stats
+        return self.alpha_stats
 
     def compute_higher_factor_ptf(self):
         """
@@ -544,4 +546,12 @@ class CorePtf(object):
             "Average return (annualized)": [perf_ptf_2, perf_ptf_3],
             "Volatility (annualized)": [vol_ptf_2, vol_ptf_3],
         }
-        return self.core_equity_ptf
+
+        # Round the results to 4 decimals
+        for key in higher_factor_ptfs:
+            higher_factor_ptfs[key] = [
+                round(higher_factor_ptfs[key][0], 4),
+                round(higher_factor_ptfs[key][1], 4),
+            ]
+
+        return higher_factor_ptfs
