@@ -447,7 +447,7 @@ class CorePtf(object):
         perfs = []
 
         for _ in range(num_simulations):
-            # Perturb the covariance matrix
+            # Sample half of the returns to compute the covariance matrix (perturbed)
             sample = np.random.permutation(self.returns)[int(len(self.returns) / 2) :]
             perturbed_cov_matrix = np.cov(sample.T, bias=True)
 
