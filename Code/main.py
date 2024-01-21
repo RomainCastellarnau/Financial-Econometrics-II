@@ -1,6 +1,9 @@
 from CorePtf import CorePtf
 
 if __name__ == "__main__":
+
+    ############################################
+    
     # Initialization of the class
     CPtf = CorePtf()
 
@@ -8,7 +11,7 @@ if __name__ == "__main__":
     # - The full model is computed by calling the function compute_full_model
     # - PC scores are rescaled to the volatility of the benchmark (SX5E)
     # - First PC loading sign is checked and pc scores 1 sign are flipped if needed
-    # - The reduced form model is created by selecting the first 3 PC scores (Bai and Ng 2002 criteria)
+    # - The reduced form model is then built by selecting the first 3 PC scores (Bai and Ng 2002 criteria)
 
     # We plot the cumulative variance explained by the PC
     CPtf.plot_cumulative_variance_explained()
@@ -62,7 +65,7 @@ if __name__ == "__main__":
 
     CPtf.plot_alpha_distribution()
 
-    # And the Mean-Volatily space of the first core equity factor replicating portfolio simulated
+    # And the Mean-Volatility space of the first core equity factor replicating portfolio simulated
     CPtf.plot_mean_vol_sim()
 
     ############################################
