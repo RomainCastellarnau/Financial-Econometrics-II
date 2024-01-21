@@ -364,7 +364,7 @@ class CorePtf(object):
         model = OLS(
             self.return_core_ptf, add_constant(self.benchmark), hasconst=True
         ).fit()
-        self.alpha_core = model.params.iloc[0] * 12  # Annualized Alpha
+        self.alpha_core = model.params.iloc[0] * 12  # Annualized alpha
         self.beta_core = model.params.iloc[1]
 
         r_predicted = model.predict()
