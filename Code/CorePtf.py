@@ -388,12 +388,12 @@ class CorePtf(object):
         # Store the results in a dictionary
         self.ptf_stats = {
             "Average return (annualized)": np.mean(self.return_core_ptf) * 12,
-            "Total return": self.total_return_core_ptf.iloc[-1],
+            "Total cumulative return": self.total_return_core_ptf.iloc[-1],
             "Volatility (annualized)": self.core_ptf_vol,
             "Alpha": self.alpha_core,
             "Beta": self.beta_core,
-            "Sharpe": np.mean(self.return_core_ptf) * 12
-            - np.mean(self.rf) / self.core_ptf_vol,
+            "Sharpe": (np.mean(self.return_core_ptf) * 12 - np.mean(self.rf))
+            / self.core_ptf_vol,
             "RMSE": rmse,
         }
 
@@ -456,9 +456,9 @@ class CorePtf(object):
         )
 
         self.alpha_stats = {
-            "mean": self.mean_alpha,
-            "std": self.alpha_std,
-            "confidence interval": self.alpha_confidence_interval,
+            "Mean": self.mean_alpha,
+            "Standard Deviation": self.alpha_std,
+            "95% Confidence interval": self.alpha_confidence_interval,
         }
         # Round the results to 4 decimals
         self.alpha_stats = {

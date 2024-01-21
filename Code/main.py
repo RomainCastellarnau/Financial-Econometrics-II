@@ -41,8 +41,12 @@ if __name__ == "__main__":
 
     CPtf.compute_core_equity_ptf()
     core_eq_composition = CPtf.core_equity_ptf
+
     print(
-        "1st Core Factor Replicating Portfolio Composition: ", "\n", core_eq_composition
+        "\n",
+        "1st Core Factor Replicating Portfolio Composition: ",
+        "\n",
+        core_eq_composition,
     )
 
     ############################################
@@ -53,9 +57,10 @@ if __name__ == "__main__":
 
     CPtf.alpha_core_ptf()
     core_eq_1_ptf_stat = CPtf.ptf_stats
-    print(
-        "1st Core Factor Replicating Portfolio Statistics: ", "\n", core_eq_1_ptf_stat
-    )
+
+    print("1st Core Factor Replicating Portfolio Statistics: ", "\n")
+    for key, value in core_eq_1_ptf_stat.items():
+        print(key, ":", value, "\n")
 
     # We can now plot the cumulative returns of the first core equity factor against the benchmark (SX5E)
     CPtf.plot_compared_performance()
@@ -73,7 +78,10 @@ if __name__ == "__main__":
     # alpha_stats is a dictionary containing the mean, the standard deviation of the estimated alphas and a 95% confidence interval
 
     alpha_stats = CPtf.simulate_alpha_impact()
-    print("Alpha Statistics: ", "\n", alpha_stats)
+
+    print("Simulated Alpha Statistics: ", "\n")
+    for key, value in alpha_stats.items():
+        print(key, ":", value, "\n")
 
     # We can now plot the distribution of the alpha of the first core equity factor replicating portfolio
     CPtf.plot_alpha_distribution()
