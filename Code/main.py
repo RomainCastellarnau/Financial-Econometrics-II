@@ -12,7 +12,7 @@ if __name__ == "__main__":
     # - The PCA full model is computed by calling the function compute_full_model on the standardized stocks returns
     # - First PC loading sign is checked and pc scores 1 sign are flipped if needed
     # - The reduced form model is then built by selecting the first 3 PC scores (Bai and Ng 2002 criteria)
-    # - PC scores are rescaled to the volatility of the benchmark (SX5E)
+    # - PC scores are being rescaled to the volatility of the benchmark (SX5E)
 
     CPtf.compute_covariance_matrix()  # Compute the covariance matrix of the returns not standardized
     CPtf.compute_full_model()  # Compute the PCA model with 47 Principal Components
@@ -64,12 +64,11 @@ if __name__ == "__main__":
     # - We then build for each different variance-covariance matrix the core equity factor replicating portfolio and compute its alpha
     # - Having obtained the distribution of the alpha, we can compute it's mean and standard deviation of the alpha and build a confidence interval
     # This process is done by the function simulate_alpha_impact() (this takes a minute and a half to run)
-    # alpha_stats is a dictionary containing the mean and standard deviation of the estimated alpha and a 95% confidence interval
+    # alpha_stats is a dictionary containing the mean, the standard deviation of the estimated alphas and a 95% confidence interval
 
     alpha_stats = CPtf.simulate_alpha_impact()
 
     # We can now plot the distribution of the alpha of the first core equity factor replicating portfolio
-
     CPtf.plot_alpha_distribution()
 
     # And the Mean-Volatility space of the first core equity factor replicating portfolio simulated
