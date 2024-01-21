@@ -448,7 +448,8 @@ class CorePtf(object):
 
         for _ in range(num_simulations):
             # Sample half of the returns to compute the covariance matrix (perturbed)
-            sample = np.random.permutation(self.returns)[int(len(self.returns) / 2) :]
+            sample_size = int(len(self.returns) * 0.95)
+            sample = np.random.permutation(self.returns)[:sample_size]
             perturbed_cov_matrix = np.cov(sample.T, bias=True)
 
             # Re-compute the core equity portfolio weights using the perturbed covariance matrix
