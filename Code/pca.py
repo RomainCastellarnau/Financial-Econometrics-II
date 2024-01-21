@@ -141,7 +141,7 @@ class PCA(object):
             pc_1_loading[pc_1_loading < 0].count()
             > pc_1_loading[pc_1_loading > 0].count()
         ):
-            self.pc_scores.iloc[:, 0] = self.pc_scores.iloc[:, 0].apply(lambda x: -x) # type: ignore
+            self.pc_scores.iloc[:, 0] = self.pc_scores.iloc[:, 0].apply(lambda x: -x)  # type: ignore
         else:
             pass
 
@@ -303,7 +303,9 @@ class PCA(object):
         self.return_benchmark = self.benchmark
 
         # Compute the alpha and the beta of the core equity portfolio using a simple OLS regression
-        model = OLS(self.return_core_ptf, self.return_benchmark, hasconst=True).fit()
+        model = OLS(
+            self.return_core_ptf, add_constant(self.return_benchmark), hasconst=True
+        ).fit()
         self.alpha_core = model.params[0]
         self.beta_core = model.params[1]
 
