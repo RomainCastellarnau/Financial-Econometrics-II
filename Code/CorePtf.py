@@ -101,11 +101,6 @@ class CorePtf(object):
         self.std_returns = returns_std
         self.std_returns = self.std_returns.iloc[:, 1:]
         self.benchmark_vol = self.benchmark.std()
-        self.compute_covariance_matrix()  # Compute the covariance matrix of the returns not standardized
-        self.compute_full_model()  # Compute the PCA model with len(stocks) Principal Components
-        self.select_pc_number()  # Select the number of Principal Components to retain in the final model
-        self.check_loading_sign()  # Check the sign of the loadings of the first PC
-        self.rescale_pc()  # Rescale the PC scores to the same volatility as that of the benchmark
 
     def compute_covariance_matrix(self):
         """
@@ -225,7 +220,7 @@ class CorePtf(object):
         Question II - 2
 
         Function that runs an OLS regression of each stocks returns on the K selected Principal Components.
-        The first Principal Component is the core equity factor. The first beta of the regression is the exposure of the stock to the core equity factor.
+        The first Principal Component is the 1st core equity factor. The first beta of the regression is the exposure of the stock to the core equity factor.
         The exposure of the stock to the core equity factor is stored in the core_eq_1_exp vector and will be used to compute the weights of the core equity portfolio.
 
         Takes as input:

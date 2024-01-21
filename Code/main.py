@@ -7,12 +7,19 @@ if __name__ == "__main__":
     # Initialization of the class
     CPtf = CorePtf()
 
-    # Question 1 - The reduced form model is computed at the initialization of the class
-    # - The full model is computed by calling the function compute_full_model
-    # - PC scores are rescaled to the volatility of the benchmark (SX5E)
+    # Question 1 - We first compute the PCA model of the returns of the 47 stocks returns
+    # - The covariance matrix is computed using the stocks returns (not standardized) and stored in the class
+    # - The PCA full model is computed by calling the function compute_full_model on the standardized stocks returns
     # - First PC loading sign is checked and pc scores 1 sign are flipped if needed
     # - The reduced form model is then built by selecting the first 3 PC scores (Bai and Ng 2002 criteria)
+    # - PC scores are rescaled to the volatility of the benchmark (SX5E)
 
+    CPtf.compute_covariance_matrix()  # Compute the covariance matrix of the returns not standardized
+    CPtf.compute_full_model()  # Compute the PCA model with 47 Principal Components
+    CPtf.select_pc_number()  # Select the number of Principal Components to retain in the final model
+    CPtf.check_loading_sign()  # Check the sign of the loadings of the first PC
+    CPtf.rescale_pc()  # Rescale the PC scores to the same volatility as that of the benchmark
+    
     # We plot the cumulative variance explained by the PC
     CPtf.plot_cumulative_variance_explained()
 
