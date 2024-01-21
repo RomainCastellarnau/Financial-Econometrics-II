@@ -39,7 +39,7 @@ if __name__ == "__main__":
 
     # Question 4 - We can now compute the returns of the first core equity factor and estimate its alpha against the benchmark (SX5E)
     # - The alpha is computed using a simple OLS regression of the replicating portfolio returns against the benchmark returns
-    # - The relevant performance metrics are also computed and stored in a dictionnary (see CorePtf.py)
+    # - The relevant performance metrics are also computed and stored in a dictionary (see CorePtf.py)
 
     CPtf.alpha_core_ptf()
     core_eq_1_ptf_stat = CPtf.ptf_stats
@@ -57,7 +57,7 @@ if __name__ == "__main__":
     # - We then build for each different variance-covariance matrix the core equity factor replicating portfolio and compute its alpha
     # - Having obtained the distribution of the alpha, we can compute it's mean and standard deviation of the alpha and build a confidence interval
     # This process is done by the function simulate_alpha_impact() (this takes a minute and a half to run)
-    # alpha_stats is a dictionnary containing the mean and standard deviation of the estimated alpha and a 95% confidence interval
+    # alpha_stats is a dictionary containing the mean and standard deviation of the estimated alpha and a 95% confidence interval
 
     alpha_stats = CPtf.simulate_alpha_impact()
 
