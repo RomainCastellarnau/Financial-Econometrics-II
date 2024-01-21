@@ -1,8 +1,8 @@
-from pca import PCA  # Import the PCA class
+from CorePtf import CorePtf
 
 if __name__ == "__main__":
     # Def the PCA model
-    model = PCA()
+    model = CorePtf()
 
     # Retrieve the attribute
     my_data = model.returns

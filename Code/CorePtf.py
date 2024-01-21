@@ -13,7 +13,7 @@ import os
 sns.set_style("darkgrid")
 
 
-class PCA(object):
+class CorePtf(object):
     """
 
     This class derives the principal components on a given data matrix containing stocks returns.
@@ -24,7 +24,7 @@ class PCA(object):
     def __init__(self):
         """
 
-        Initializes the PCA object and runs all the relevant methods to compute the core equity portfolio.
+        Initializes the CorePtf object and runs all the relevant methods to compute the core equity portfolio and answer the questions of the assignment.
 
         Takes as input:
 
@@ -43,7 +43,7 @@ class PCA(object):
             - plot_compared_performance: Plots the performance of the core equity portfolio and the benchmark;
             - simulate_alpha_impact(n_sim): Simulates the impact of estimation errors in the covariance matrix on the alpha of the replicating portfolio;
 
-        Variables list:
+        Atrributes list:
 
             - benchmark (pd.DataFrame): Pandas DataFrame containing the returns of the benchmark (stock index);
             - returns (pd.DataFrame): Pandas DataFrame containing the returns of the stocks universe on which PCA is performed;
@@ -67,7 +67,6 @@ class PCA(object):
             - total_return_core_ptf (np.ndarray): Vector containing the total return of the core equity portfolio since inception;
             - total_return_benchmark (np.ndarray): Vector containing the total return of the benchmark since inception;
             - core_ptf_vol (float): Volatility of the core equity portfolio;
-            - comparative_perf (float): Comparative performance of the core equity portfolio relative to the benchmark;
             - ptf_stats (Dict): Dictionary containing the performance metrics of the core equity portfolio;
             - mean_alpha (float): Mean alpha of the replicating portfolio;
             - alpha_std (float): Standard deviation of the alpha of the replicating portfolio;
@@ -151,6 +150,8 @@ class PCA(object):
 
     def compute_full_model(self):
         """
+        #Question I - 1
+
         Function that computes the Principal Components model on the standardized stocks returns.
 
         Takes as input:
@@ -173,6 +174,7 @@ class PCA(object):
 
     def check_loading_sign(self):
         """
+        Question I - 3
 
         Function that checks the sign of the loadings of the first PC. If F1 the loading vector of the first PC
         contains more than 50% of negative values, the sign of the first factor is flipped.
@@ -195,6 +197,8 @@ class PCA(object):
 
     def rescale_pc(self):
         """
+        Question I - 2
+
         Function that rescales the Principal Components to the same volatility as that of the benchmark.
         First PC is the core equity factor 1 will capture the most variance in the data. (2007 - 2008 crisis)
 
@@ -212,6 +216,8 @@ class PCA(object):
 
     def select_pc_number(self):
         """
+        Question II - 1
+
         Function that selects the number of Principal Components to retain in the final model.
         The number of Principal Components is selected based on the Bai-Ng (2002) Criterion.
         Then the full model is adapted so that it only contains the selected Principal Components.
@@ -235,6 +241,8 @@ class PCA(object):
 
     def pca_model(self):
         """
+        Question II - 2
+
         Function that runs an OLS regression of each stocks returns on the K selected Principal Components.
         The first Principal Component is the core equity factor. The first beta of the regression is the exposure of the stock to the core equity factor.
         The exposure of the stock to the core equity factor is stored in the core_eq_1_exp vector and will be used to compute the weights of the core equity portfolio.
@@ -307,7 +315,9 @@ class PCA(object):
 
     def compute_core_equity_ptf(self):
         """
-        Function that returns the weights of the core equity portfolio.
+        Question III
+
+        Function that returns the weights of the core equity portfolio, these weights are computed using the optimization routine defined above.
 
         Takes as input:
             None;
@@ -327,6 +337,8 @@ class PCA(object):
 
     def alpha_core_ptf(self):
         """
+        Question IV
+
         Function that computes the alpha of the core equity portfolio as well as other performance metrics.
         The alpha is computed using a simple OLS regression of the core equity portfolio returns on the benchmark returns.
 
@@ -373,18 +385,16 @@ class PCA(object):
             ** 0.5
         )
 
-        # Compute the alpha of the core equity portfolio & its sharpe ratio
-        self.comparative_perf = np.mean(self.return_core_ptf) * 12 - np.mean(self.rf)
-
         # Store the results in a dictionary
         self.ptf_stats = {
-            "average return (annualized)": np.mean(self.return_core_ptf) * 12,
-            "total return": self.total_return_core_ptf.iloc[-1],
-            "volatility (annualized)": self.core_ptf_vol,
-            "alpha": self.alpha_core,
-            "beta": self.beta_core,
-            "sharpe": self.comparative_perf / self.core_ptf_vol,
-            "rmse": rmse,
+            "Average return (annualized)": np.mean(self.return_core_ptf) * 12,
+            "Total return": self.total_return_core_ptf.iloc[-1],
+            "Volatility (annualized)": self.core_ptf_vol,
+            "Alpha": self.alpha_core,
+            "Beta": self.beta_core,
+            "Sharpe": np.mean(self.return_core_ptf) * 12
+            - np.mean(self.rf) / self.core_ptf_vol,
+            "RMSE": rmse,
         }
 
         # Round the results to 4 decimals
@@ -417,6 +427,8 @@ class PCA(object):
 
     def simulate_alpha_impact(self, num_simulations=1000):
         """
+        Question V
+
         Simulate the impact of estimation errors in the covariance matrix on the alpha of the replicating portfolio.
 
         Takes as input:
