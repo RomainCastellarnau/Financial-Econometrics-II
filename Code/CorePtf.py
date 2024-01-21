@@ -11,8 +11,6 @@ from scipy.optimize import minimize
 import os
 import warnings
 
-from zmq import has
-
 sns.set_style("darkgrid")
 
 
