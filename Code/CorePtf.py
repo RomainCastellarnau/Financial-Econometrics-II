@@ -253,6 +253,9 @@ class CorePtf(object):
 
         self.pca_models = {}
         self.core_eq_1_exp = np.zeros(len(self.stocks))
+        self.core_eq_2_exp = np.zeros(len(self.stocks))
+        self.core_eq_3_exp = np.zeros(len(self.stocks))
+
         for i, stock in enumerate(self.stocks):
             y = np.array(self.returns[stock])
             X = np.array(self.pc_scores)
@@ -269,6 +272,8 @@ class CorePtf(object):
                 }
                 # Add the core equity factor 1 (the first beta of the regression) to the vector of sensitivities
                 self.core_eq_1_exp[i] = self.pca_models[stock]["beta"][0]
+                self.core_eq_2_exp[i] = self.pca_models[stock]["beta"][1]
+                self.core_eq_3_exp[i] = self.pca_models[stock]["beta"][2]
 
             except KeyError as e:
                 print(f"Error for stock {i}: {e}")
@@ -278,8 +283,16 @@ class CorePtf(object):
                 print(self.returns.columns.tolist())
                 raise
 
-    def optim_routine(self, covariance_matrix):
-        core_eq_1_exp = self.core_eq_1_exp
+    def optim_routine(self, covariance_matrix, factor=1):
+        core_eq_exp = (
+            self.core_eq_1_exp
+            if factor == 1
+            else (
+                self.core_eq_2_exp
+                if factor == 2
+                else (self.core_eq_3_exp if factor == 3 else None)
+            )
+        )
 
         def objective(W, R, C):
             # calculate mean/variance of the portfolio
@@ -293,14 +306,14 @@ class CorePtf(object):
         b_ = [(0.0, 1.0) for i in range(n)]
         c_ = [
             {"type": "eq", "fun": lambda W: sum(W) - 1.0},
-            {"type": "eq", "fun": lambda W: W.T @ core_eq_1_exp - 1.0},
+            {"type": "eq", "fun": lambda W: W.T @ core_eq_exp - 1.0},
         ]
 
         optimized = minimize(
             objective,
             W,
             args=(
-                core_eq_1_exp,
+                core_eq_exp,
                 covariance_matrix,
             ),
             method="SLSQP",
@@ -478,3 +491,57 @@ class CorePtf(object):
         }
 
         return alpha_stats
+
+    def compute_higher_factor_ptf(self):
+        """
+
+        Function that returns the weights of the portfolios replicating the second and third equity factors. These weights are computed using the optimization routine defined above.
+
+        Takes as input:
+            None;
+
+        Output:
+            higher_factor_ptfs (Dict): Dictionary containing the weights of the 2nd and third factor replicating portfolios;
+        """
+
+        # Ensure the PCA model is already computed
+        if not hasattr(self, "core_eq_1_exp"):
+            self.pca_model()
+
+        core_equity_w_2 = np.array(self.optim_routine(self.cov_matrix, factor=2))
+        core_equity_w_3 = np.array(self.optim_routine(self.cov_matrix, factor=3))
+
+        core_equity_ptf_2 = pd.DataFrame(
+            data=core_equity_w_2, columns=["weights"], index=self.stocks
+        )
+
+        core_equity_ptf_3 = pd.DataFrame(
+            data=core_equity_w_3, columns=["weights"], index=self.stocks
+        )
+
+        perf_ptf_2 = np.mean(self.returns @ core_equity_ptf_2["weights"]) * 12
+        perf_ptf_3 = np.mean(self.returns @ core_equity_ptf_3["weights"]) * 12
+        vol_ptf_2 = (
+            np.sqrt(
+                core_equity_ptf_2["weights"].T
+                @ self.cov_matrix
+                @ core_equity_ptf_2["weights"]
+                * 12
+            )
+            ** 0.5
+        )
+
+        vol_ptf_3 = (
+            np.sqrt(
+                core_equity_ptf_3["weights"].T
+                @ self.cov_matrix
+                @ core_equity_ptf_3["weights"]
+                * 12
+            )
+            ** 0.5
+        )
+        higher_factor_ptfs = {
+            "Average return (annualized)": [perf_ptf_2, perf_ptf_3],
+            "Volatility (annualized)": [vol_ptf_2, vol_ptf_3],
+        }
+        return self.core_equity_ptf
