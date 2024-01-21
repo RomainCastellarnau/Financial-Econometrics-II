@@ -629,7 +629,7 @@ class CorePtf(object):
             plt.figure(figsize=(10, 6), dpi=self.dpi)
             plt.plot(
                 self.total_return_core_ptf,
-                label="First Core Equity Portfolio Total Return",
+                label="1st Factor Replicating Portfolio Total Return",
             )
             plt.plot(
                 ptf_2_total_return,
