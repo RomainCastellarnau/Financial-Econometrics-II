@@ -698,14 +698,19 @@ class CorePtf(object):
 
         warnings.filterwarnings("ignore")
 
-        plt.figure(figsize=(10, 6))
-        plt.pie(
+        fig, ax = plt.subplots(figsize=(12, 8))
+
+        wedges, texts, autotexts = ax.pie(
             self.core_equity_ptf["weights"],
             labels=self.stocks,
             autopct="%1.1f%%",
             shadow=True,
             startangle=90,
         )
+
+        for text in texts + autotexts:
+            text.set_fontsize(8)
+
         plt.title("Composition of the First Core Equity Portfolio")
         plt.show()
 
