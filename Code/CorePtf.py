@@ -10,6 +10,8 @@ from scipy.stats import norm
 from scipy.optimize import minimize
 import os
 
+from zmq import has
+
 sns.set_style("darkgrid")
 
 
@@ -414,30 +416,6 @@ class CorePtf(object):
         for key in self.ptf_stats:
             self.ptf_stats[key] = round(self.ptf_stats[key], 4)
 
-    def plot_compared_performance(self):
-        """
-        Plot the performance of the core equity portfolio and the benchmark.
-
-        Takes as input:
-            None;
-
-        Output:
-            None;
-        """
-        # Ensure core equity portfolio weights are already computed
-        if not hasattr(self, "total_return_core_ptf"):
-            self.alpha_core_ptf()
-
-        # Plot the performance of the core equity portfolio and the benchmark
-        plt.figure(figsize=(10, 6))
-        plt.plot(self.total_return_core_ptf, label="Core Equity Portfolio Total Return")
-        plt.plot(self.total_return_benchmark, label="Benchmark Total Return")
-        plt.legend()
-        plt.title("Performance of the Core Equity Portfolio vs. Benchmark")
-        plt.xlabel("Date")
-        plt.ylabel("Cumulative Return")
-        plt.show()
-
     def simulate_alpha_impact(self, num_simulations=1000):
         """
         Question V
@@ -517,21 +495,21 @@ class CorePtf(object):
         core_equity_w_2 = np.array(self.optim_routine(self.cov_matrix, factor=2))
         core_equity_w_3 = np.array(self.optim_routine(self.cov_matrix, factor=3))
 
-        core_equity_ptf_2 = pd.DataFrame(
+        self.core_equity_ptf_2 = pd.DataFrame(
             data=core_equity_w_2, columns=["weights"], index=self.stocks
         )
 
-        core_equity_ptf_3 = pd.DataFrame(
+        self.core_equity_ptf_3 = pd.DataFrame(
             data=core_equity_w_3, columns=["weights"], index=self.stocks
         )
 
-        perf_ptf_2 = np.mean(self.returns @ core_equity_ptf_2["weights"]) * 12
-        perf_ptf_3 = np.mean(self.returns @ core_equity_ptf_3["weights"]) * 12
+        perf_ptf_2 = np.mean(self.returns @ self.core_equity_ptf_2["weights"]) * 12
+        perf_ptf_3 = np.mean(self.returns @ self.core_equity_ptf_3["weights"]) * 12
         vol_ptf_2 = (
             np.sqrt(
-                core_equity_ptf_2["weights"].T
+                self.core_equity_ptf_2["weights"].T
                 @ self.cov_matrix
-                @ core_equity_ptf_2["weights"]
+                @ self.core_equity_ptf_2["weights"]
                 * 12
             )
             ** 0.5
@@ -539,9 +517,9 @@ class CorePtf(object):
 
         vol_ptf_3 = (
             np.sqrt(
-                core_equity_ptf_3["weights"].T
+                self.core_equity_ptf_3["weights"].T
                 @ self.cov_matrix
-                @ core_equity_ptf_3["weights"]
+                @ self.core_equity_ptf_3["weights"]
                 * 12
             )
             ** 0.5
@@ -559,3 +537,64 @@ class CorePtf(object):
             ]
 
         return higher_factor_ptfs
+
+    def plot_compared_performance(self, factor=1):
+        """
+        Plot the performance of the core equity portfolio and the benchmark.
+
+        Takes as input:
+            None;
+
+        Output:
+            None;
+        """
+        # Ensure core equity portfolio weights are already computed
+        if not hasattr(self, "total_return_core_ptf"):
+            self.alpha_core_ptf()
+
+        if factor != 1:
+            if not hasattr(self, "core_equity_ptf_2"):
+                self.compute_higher_factor_ptf()
+
+            ptf_2_total_return = (
+                np.cumprod(1 + self.returns @ self.core_equity_ptf_2["weights"]) - 1
+            )
+            ptf_3_total_return = (
+                np.cumprod(1 + self.returns @ self.core_equity_ptf_3["weights"]) - 1
+            )
+            # Plot the performance of the factors replicating portfolios and the benchmark
+            plt.figure(figsize=(10, 6))
+            plt.plot(
+                self.total_return_core_ptf,
+                label="First Core Equity Portfolio Total Return",
+            )
+            plt.plot(
+                ptf_2_total_return,
+                label="2nd Factor Replicating Portfolio Total Return",
+            )
+            plt.plot(
+                ptf_3_total_return,
+                label="3rd Factor Replicating Portfolio Total Return",
+            )
+            plt.plot(self.total_return_benchmark, label="Benchmark Total Return (SX5E)")
+            plt.legend()
+            plt.title(
+                "Total Performance of the Factors Replicating Portfolios vs. Benchmark"
+            )
+            plt.xlabel("Date")
+            plt.ylabel("Cumulative Return")
+            plt.show()
+
+        else:
+            # Plot the performance of the first core equity portfolio and the benchmark
+            plt.figure(figsize=(10, 6))
+            plt.plot(
+                self.total_return_core_ptf,
+                label="First Core Equity Portfolio Total Return",
+            )
+            plt.plot(self.total_return_benchmark, label="Benchmark Total Return (SX5E)")
+            plt.legend()
+            plt.title("Performance of the Core Equity Portfolio vs. Benchmark")
+            plt.xlabel("Date")
+            plt.ylabel("Cumulative Return")
+            plt.show()
