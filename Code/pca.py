@@ -104,7 +104,6 @@ class PCA(object):
         self.pca_model()  # Run an OLS regression of each stocks returns on the K selected Principal Components
         self.compute_core_equity_ptf()  # Compute the weights of the core equity portfolio
         self.alpha_core_ptf()  # Compute the alpha of the core equity portfolio
-        self.simulate_alpha_impact()  # Simulate the impact of estimation errors in the covariance matrix on the alpha of the replicating portfolio
 
     def compute_covariance_matrix(self):
         """
@@ -397,18 +396,19 @@ class PCA(object):
         """
         Simulate the impact of estimation errors in the covariance matrix on the alpha of the replicating portfolio.
 
-        Args:
-            num_simulations (int): Number of simulations to perform.
+        Takes as input:
+            num_simulations (int): Number of simulations to perform;
 
-        Returns:
-            tuple: Mean and 95% confidence interval of the estimated alpha.
+        Output:
+            alpha_stats (Dict): Dictionary containing the mean, standard deviation and confidence interval of the alpha of the replicating portfolio;
         """
-        alphas = []
-        perfs = []
 
         # Ensure core equity portfolio weights are already computed
         if not hasattr(self, "core_eq_1_exp"):
             self.pca_model()
+
+        alphas = []
+        perfs = []
 
         for _ in range(num_simulations):
             # Perturb the covariance matrix
@@ -428,10 +428,16 @@ class PCA(object):
             perfs.append(sim_perf)
 
         # Calculate mean and confidence interval of alpha
-        mean_alpha = np.mean(alphas)
-        alpha_std = np.std(alphas)
-        confidence_interval = norm.interval(
-            0.95, loc=mean_alpha, scale=alpha_std / np.sqrt(num_simulations)
+        self.mean_alpha = np.mean(alphas)
+        self.alpha_std = np.std(alphas)
+        self.alpha_confidence_interval = norm.interval(
+            0.95, loc=self.mean_alpha, scale=self.alpha_std / np.sqrt(num_simulations)
         )
 
-        return mean_alpha, confidence_interval
+        alpha_stats = {
+            "mean": self.mean_alpha,
+            "std": self.alpha_std,
+            "confidence interval": self.alpha_confidence_interval,
+        }
+
+        return alpha_stats
