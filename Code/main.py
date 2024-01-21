@@ -52,7 +52,7 @@ if __name__ == "__main__":
     # - We randomly choose a sample containing 95% of the returns / compute the associated variance covariance matrix
     # - We then build for each different variance-covariance matrix the core equity factor replicating portfolio and compute its alpha
     # - Having obtained the distribution of the alpha, we can compute it's mean and standard deviation of the alpha and build a confidence interval
-    # This process is done by the function simulate_alpha_impact()
+    # This process is done by the function simulate_alpha_impact() (this takes a minute and a half to run)
 
     alpha_stats = CPtf.simulate_alpha_impact()
 

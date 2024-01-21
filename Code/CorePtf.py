@@ -737,9 +737,9 @@ class CorePtf(object):
         self.format_axis_percentage(plt.gca(), axis="x")
         legend_text = (
             r"$\mu_{\hat{\alpha}} = $"
-            + f"{self.mean_alpha:.{3}%}\n"
+            + f"{self.mean_alpha:.{2}%}\n"
             + r"$\sigma_{\hat{\alpha}} = $"
-            + f"{self.alpha_std:.{3}%}"
+            + f"{self.alpha_std:.{2}%}"
         )
         plt.legend([legend_text], loc="upper right")
         plt.show()
