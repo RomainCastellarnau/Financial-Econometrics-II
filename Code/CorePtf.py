@@ -44,35 +44,13 @@ class CorePtf(object):
             - alpha_core_ptf: Computes the alpha of the core equity portfolio as well as other performance metrics;
             - plot_compared_performance: Plots the performance of the core equity portfolio and the benchmark;
             - simulate_alpha_impact(n_sim): Simulates the impact of estimation errors in the covariance matrix on the alpha of the replicating portfolio;
-
-        Atrributes list:
-
-            - benchmark (pd.DataFrame): Pandas DataFrame containing the returns of the benchmark (stock index);
-            - returns (pd.DataFrame): Pandas DataFrame containing the returns of the stocks universe on which PCA is performed;
-            - scalers (Dict): Dictionary containing the scalers used to standardize the returns of each stock;
-            - stocks (List): The list of stocks tickers on which PCA is performed;
-            - std_returns (pd.DataFrame): Pandas DataFrame containing the standardized returns of the stocks universe on which PCA is performed;
-            - benchmark_vol (float): The volatility of the benchmark;
-            - cov_matrix (pd.DataFrame): Pandas DataFrame containing the covariance matrix of the returns;
-            - full_model (statsmodels.multivariate.pca.PCA): PCA model computed on the standardized returns;
-            - eigenvalues (np.ndarray): Eigenvalues of the standardized returns covariance matrix;
-            - pc_scores (pd.DataFrame): Pandas DataFrame containing the PC scores of the standardized returns;
-            - pc_loadings (pd.DataFrame): Pandas DataFrame containing the PC loadings of the standardized returns;
-            - rescaled_eigenvalues (np.ndarray): Rescaled eigenvalues of the standardized returns covariance matrix;
-            - variance_explained (np.ndarray): Variance explained by each PC;
-            - pca_models (Dict): Dictionary containing the OLS regression results of each stock returns on the K selected Principal Components;
-            - core_eq_1_exp (np.ndarray): Vector containing the exposure of each stock to the core equity factor 1;
-            - core_equity_w (np.ndarray): Vector containing the weights of the core equity portfolio;
-            - core_equity_ptf (pd.DataFrame): Pandas DataFrame containing the weights of the core equity portfolio (Equity Portfolio replicating the first equity factor);
-            - alpha_core (float): Alpha of the core equity portfolio;
-            - beta_core (float): Beta of the core equity portfolio;
-            - total_return_core_ptf (np.ndarray): Vector containing the total return of the core equity portfolio since inception;
-            - total_return_benchmark (np.ndarray): Vector containing the total return of the benchmark since inception;
-            - core_ptf_vol (float): Volatility of the core equity portfolio;
-            - ptf_stats (Dict): Dictionary containing the performance metrics of the core equity portfolio;
-            - mean_alpha (float): Mean alpha of the replicating portfolio;
-            - alpha_std (float): Standard deviation of the alpha of the replicating portfolio;
-            - alpha_confidence_interval (Tuple): Tuple containing the confidence interval of the alpha of the replicating portfolio;
+            - compute_higher_factor_ptf: Computes the weights of the portfolios replicating the second and third core equity factors;
+            - plot_cumulative_variance_explained: Plots the cumulative variance explained by the Principal Components (Full model);
+            - plot_variance_explained: Plots the variance explained by the select Principal Components;
+            - plot_compared_performance: Plots the cumulative performance of the first core equity replicating portfolio and the benchmark;
+            - plot_core_ptf_comp: Plots the composition of the first core equity portfolio;
+            - plot_alpha_distribution: Plots the distribution of the alpha of the first core equity factor replicating portfolio;
+            - plot_mean_vol_sim: Plots the mean return against the volatility of the simulated portfolios;
         """
         path = os.path.join(os.path.dirname(os.getcwd()), "Data")
 
@@ -424,7 +402,7 @@ class CorePtf(object):
         Simulate the impact of estimation errors in the covariance matrix on the alpha of the replicating portfolio.
 
         Takes as input:
-            num_simulations (int): Number of simulations to perform;
+            num_simulations (int): Number of simulations to perform (default: 1000);
 
         Output:
             self.alpha_stats (Dict): Dictionary containing the mean, standard deviation and confidence interval of the alpha of the replicating portfolio;
