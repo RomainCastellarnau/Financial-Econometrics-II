@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mtick
 import seaborn as sns
 from sklearn.preprocessing import StandardScaler
 from statsmodels.regression.linear_model import OLS
@@ -546,6 +547,49 @@ class CorePtf(object):
 
         return higher_factor_ptfs
 
+    def format_axis_percentage(self, ax, axis="both", precision=3):
+        """
+        Formats the axis ticks in percentage with a specified precision.
+
+        Parameters:
+            ax (Matplotlib Axes): The Axes on which to apply the formatting.
+            axis (str): The axis to format. Can be 'both', 'x', or 'y'.
+            precision (int): The number of decimals to display.
+
+        Returns:
+            None
+        """
+        percentage_format = "{:." + str(precision) + "%}"
+        if axis in ["both", "x"]:
+            ax.xaxis.set_major_formatter(
+                mtick.FuncFormatter(lambda x, _: percentage_format.format(x))
+            )
+        if axis in ["both", "y"]:
+            ax.yaxis.set_major_formatter(
+                mtick.FuncFormatter(lambda y, _: percentage_format.format(y))
+            )
+
+    def plot_variance_explained(self):
+        """
+        Plot the variance explained by each Principal Component
+
+        Takes as input:
+            None;
+
+        Output:
+            Matplotlib.plt bar plot;
+        """
+        plt.figure(figsize=(10, 6))
+        plt.bar(
+            x=range(1, len(self.variance_explained) + 1),
+            height=self.variance_explained,
+        )
+        plt.xlabel("Principal Component")
+        plt.ylabel("Variance Explained")
+        plt.title("Variance Explained by each Principal Component")
+        self.format_axis_percentage(plt.gca(), axis="y")
+        plt.show()
+
     def plot_compared_performance(self, factor=1):
         """
         Plot the performance of the core equity portfolio and the benchmark.
@@ -591,6 +635,7 @@ class CorePtf(object):
             )
             plt.xlabel("Date")
             plt.ylabel("Cumulative Return")
+            self.format_axis_percentage(plt.gca(), axis="y")
             plt.show()
 
         else:
@@ -605,6 +650,7 @@ class CorePtf(object):
             plt.title("Performance of the Core Equity Portfolio vs. Benchmark")
             plt.xlabel("Date")
             plt.ylabel("Cumulative Return")
+            self.format_axis_percentage(plt.gca(), axis="y")
             plt.show()
 
     def plot_alpha_distribution(self):
@@ -616,6 +662,7 @@ class CorePtf(object):
         plt.xlabel("Alpha of the First Factor Replicating Portfolio")
         plt.ylabel("Frequency")
         plt.title("Distribution of the Alpha of the First Factor Replicating Portfolio")
+        self.format_axis_percentage(plt.gca(), axis="x")
         plt.show()
 
     def plot_core_ptf_comp(self):
@@ -664,4 +711,5 @@ class CorePtf(object):
         plt.xlabel("Volatility")
         plt.ylabel("Mean Return")
         plt.title("Mean Return vs. Volatility of the Simulated Portfolios")
+        self.format_axis_percentage(plt.gca(), axis="both")
         plt.show()
