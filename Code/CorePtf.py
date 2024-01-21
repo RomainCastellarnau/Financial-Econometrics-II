@@ -227,7 +227,7 @@ class CorePtf(object):
         Output:
             None;
         """
-        # Bai-Ng (2002) Criterion: Select based on the first 20 information criteria
+        # Bai-Ng (2002) Criterion: Selection based on the information criteria provided by reduced form models with up to 20 factors
         ic_values = self.full_model.ic.iloc[0:20, 0]  # type: ignore
         # Get the index corresponding to the minimum BIC value
         k = np.argmin(ic_values) + 1  # type: ignore
