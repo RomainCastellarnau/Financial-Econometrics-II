@@ -68,7 +68,8 @@ class PCA(object):
             .set_index("observation_date")
             .rename(columns={"IRLTLT01FRM156N": "10Y OAT"})
             .rename_axis("Date")
-        )
+        ).iloc[:, 0]
+        self.rf.index = returns.index
 
         stocks = returns.columns.tolist()
 
@@ -102,6 +103,8 @@ class PCA(object):
         self.rescale_pc()  # Rescale the PC scores to the same volatility as that of the benchmark
         self.pca_model()  # Run an OLS regression of each stocks returns on the K selected Principal Components
         self.compute_core_equity_ptf()  # Compute the weights of the core equity portfolio
+        self.alpha_core_ptf()  # Compute the alpha of the core equity portfolio
+        self.simulate_alpha_impact()  # Simulate the impact of estimation errors in the covariance matrix on the alpha of the replicating portfolio
 
     def compute_covariance_matrix(self):
         """
@@ -302,13 +305,14 @@ class PCA(object):
 
     def alpha_core_ptf(self):
         """
-        Calculate an estimation of the alpha of the core equity portfolio.
+        Function that computes the alpha of the core equity portfolio as well as other performance metrics.
+        The alpha is computed using a simple OLS regression of the core equity portfolio returns on the benchmark returns.
 
         Takes as input:
             None;
 
         Output:
-            ptf_stats (Dict): Dictionary containing the performance statistics of the core equity portfolio;
+            None;
         """
         # Ensure core equity portfolio weights are already computed
         if not hasattr(self, "core_equity_ptf"):
@@ -326,7 +330,7 @@ class PCA(object):
         model = OLS(
             self.return_core_ptf, add_constant(self.return_benchmark), hasconst=True
         ).fit()
-        self.alpha_core = model.params.iloc[0]
+        self.alpha_core = model.params.iloc[0] * 12  # Annualized alpha
         self.beta_core = model.params.iloc[1]
 
         r_predicted = model.predict()
@@ -348,19 +352,22 @@ class PCA(object):
         )
 
         # Compute the alpha of the core equity portfolio & its sharpe ratio
-        self.comparative_perf = np.mean(self.return_core_ptf - self.benchmark) * 12
+        self.comparative_perf = np.mean(self.return_core_ptf) * 12 - np.mean(self.rf)
 
         # Store the results in a dictionary
-        ptf_stats = {
+        self.ptf_stats = {
             "average return (annualized)": np.mean(self.return_core_ptf) * 12,
             "total return": self.total_return_core_ptf.iloc[-1],
+            "volatility (annualized)": self.core_ptf_vol,
             "alpha": self.alpha_core,
             "beta": self.beta_core,
             "sharpe": self.comparative_perf / self.core_ptf_vol,
             "rmse": rmse,
         }
 
-        return ptf_stats
+        # Round the results to 4 decimals
+        for key in self.ptf_stats:
+            self.ptf_stats[key] = round(self.ptf_stats[key], 4)
 
     def plot_compared_performance(self):
         """
@@ -405,7 +412,7 @@ class PCA(object):
 
         for _ in range(num_simulations):
             # Perturb the covariance matrix
-            sample = np.random.permutation(self.returns)[int(len(self.returns) / 20) :]
+            sample = np.random.permutation(self.returns)[int(len(self.returns) / 2) :]
             perturbed_cov_matrix = np.cov(sample.T, bias=True)
 
             # Re-compute the core equity portfolio weights using the perturbed covariance matrix
@@ -413,9 +420,9 @@ class PCA(object):
 
             # Compute the alpha for the perturbed weights
             return_core_ptf = perturbed_weights.T @ self.returns
-            sim_perf = np.mean(perturbed_weights.T @ self.returns) * 12
+            sim_perf = np.mean(return_core_ptf) * 12
             result = OLS(return_core_ptf, add_constant(self.return_benchmark)).fit()
-            alpha_sim = result.params.iloc[0]
+            alpha_sim = result.params.iloc[0] * 12
 
             alphas.append(alpha_sim)
             perfs.append(sim_perf)
@@ -428,19 +435,3 @@ class PCA(object):
         )
 
         return mean_alpha, confidence_interval
-
-    def perturb_cov_matrix(self):
-        """
-        Perturb the covariance matrix within a confidence region.
-
-        Returns:
-            numpy.ndarray: Perturbed covariance matrix.
-        """
-        # You can implement a method to perturb the covariance matrix here
-        # For example, you can use a multivariate normal distribution with mean=original covariance and some covariance matrix representing estimation errors
-        # This is a simplified example; you may want to adjust it based on your specific needs
-        estimation_errors = np.random.normal(
-            loc=0, scale=0.01, size=self.cov_matrix.shape
-        )
-        perturbed_cov_matrix = self.cov_matrix + estimation_errors
-        return perturbed_cov_matrix
