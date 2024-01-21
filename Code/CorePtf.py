@@ -234,6 +234,7 @@ class CorePtf(object):
         self.core_eq_1_exp = np.zeros(len(self.stocks))
         self.core_eq_2_exp = np.zeros(len(self.stocks))
         self.core_eq_3_exp = np.zeros(len(self.stocks))
+        self.r2 = np.zeros(len(self.stocks))
 
         for i, stock in enumerate(self.stocks):
             y = np.array(self.returns[stock])
@@ -253,6 +254,7 @@ class CorePtf(object):
                 self.core_eq_1_exp[i] = self.pca_models[stock]["beta"][0]
                 self.core_eq_2_exp[i] = self.pca_models[stock]["beta"][1]
                 self.core_eq_3_exp[i] = self.pca_models[stock]["beta"][2]
+                self.r2[i] = self.pca_models[stock]["R2"]
 
             except KeyError as e:
                 print(f"Error for stock {i}: {e}")
@@ -586,9 +588,8 @@ class CorePtf(object):
             height=self.variance_explained,
         )
         plt.xticks(range(1, len(self.variance_explained) + 1), ["PC1", "PC2", "PC3"])
-        plt.xlabel("Principal Components")
         plt.ylabel("Variance Explained")
-        plt.title("Variance Explained by each Principal Component")
+        plt.title("Variance Explained by each selected Principal Component")
         self.format_axis_percentage(plt.gca(), axis="y")
         plt.show()
 
@@ -701,7 +702,7 @@ class CorePtf(object):
         )
 
         for text in texts + autotexts:
-            text.set_fontsize(8)
+            text.set_fontsize(6)
 
         plt.title("Composition of the First Core Equity Portfolio")
         plt.show()
@@ -726,7 +727,7 @@ class CorePtf(object):
 
         plt.figure(figsize=(10, 6), dpi=self.dpi)
         plt.hist(self.alphas, bins=50)
-        plt.xlabel("Alpha of the First Factor Replicating Portfolio")
+        plt.xlabel("Simulated Alphas of the First Factor Replicating Portfolio")
         plt.ylabel("Frequency")
         plt.title("Distribution of the Alpha of the First Factor Replicating Portfolio")
         self.format_axis_percentage(plt.gca(), axis="x")

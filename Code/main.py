@@ -1,9 +1,9 @@
 from CorePtf import CorePtf
 
 if __name__ == "__main__":
-
-    ############################################
     
+    ############################################
+
     # Initialization of the class
     CPtf = CorePtf()
 
@@ -19,7 +19,7 @@ if __name__ == "__main__":
     CPtf.select_pc_number()  # Select the number of Principal Components to retain in the final model
     CPtf.check_loading_sign()  # Check the sign of the loadings of the first PC
     CPtf.rescale_pc()  # Rescale the PC scores to the same volatility as that of the benchmark
-    
+
     # We plot the cumulative variance explained by the PC
     CPtf.plot_cumulative_variance_explained()
 
