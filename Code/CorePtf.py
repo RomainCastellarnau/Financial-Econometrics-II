@@ -74,7 +74,7 @@ class CorePtf(object):
             .rename(columns={"IRLTLT01FRM156N": "10Y OAT"})
             .rename_axis("Date")
         ).iloc[:, 0]
-        
+
         self.rf.index = returns.index
 
         stocks = returns.columns.tolist()
