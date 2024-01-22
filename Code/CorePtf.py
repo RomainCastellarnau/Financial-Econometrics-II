@@ -342,8 +342,8 @@ class CorePtf(object):
         """
         Question IV
 
-        Function that computes the alpha of the core equity portfolio as well as other performance metrics.
-        The alpha is computed using a simple OLS regression of the core equity portfolio returns on the benchmark returns.
+        Function that computes the estimated alpha of the core equity portfolio as well as other performance metrics.
+        The estimated alpha is obtained using a simple OLS regression of the core equity portfolio returns on the benchmark returns.
 
         Takes as input:
             None;
@@ -403,13 +403,13 @@ class CorePtf(object):
         """
         Question V
 
-        Simulate the impact of estimation errors in the covariance matrix on the alpha of the replicating portfolio.
+        Simulate the impact of estimation errors in the covariance matrix on the estimated alpha of the replicating portfolio.
 
         Takes as input:
             num_simulations (int): Number of simulations to perform (default: 1000);
 
         Output:
-            self.alpha_stats (Dict): Dictionary containing the mean, standard deviation and confidence interval of the alpha of the replicating portfolio;
+            self.alpha_stats (Dict): Dictionary containing the mean, standard deviation and confidence interval of the estimated alphas of the simulated replicating portfolios;
         """
 
         # Ensure core equity portfolio weights are already computed
@@ -495,23 +495,17 @@ class CorePtf(object):
 
         perf_ptf_2 = np.mean(self.returns @ self.core_equity_ptf_2["weights"]) * 12
         perf_ptf_3 = np.mean(self.returns @ self.core_equity_ptf_3["weights"]) * 12
-        vol_ptf_2 = (
-            np.sqrt(
-                self.core_equity_ptf_2["weights"].T
-                @ self.cov_matrix
-                @ self.core_equity_ptf_2["weights"]
-            )
-            * np.sqrt(12)
-        )
+        vol_ptf_2 = np.sqrt(
+            self.core_equity_ptf_2["weights"].T
+            @ self.cov_matrix
+            @ self.core_equity_ptf_2["weights"]
+        ) * np.sqrt(12)
 
-        vol_ptf_3 = (
-            np.sqrt(
-                self.core_equity_ptf_3["weights"].T
-                @ self.cov_matrix
-                @ self.core_equity_ptf_3["weights"]
-            )
-            * np.sqrt(12)
-        )
+        vol_ptf_3 = np.sqrt(
+            self.core_equity_ptf_3["weights"].T
+            @ self.cov_matrix
+            @ self.core_equity_ptf_3["weights"]
+        ) * np.sqrt(12)
         higher_factor_ptfs = {
             "Average return (annualized)": [perf_ptf_2, perf_ptf_3],
             "Volatility (annualized)": [vol_ptf_2, vol_ptf_3],
@@ -576,7 +570,7 @@ class CorePtf(object):
 
     def plot_variance_explained(self, savefig=False):
         """
-        Plot the variance explained by each Principal Component
+        Plot the variance explained by each Principal Component.
 
         Takes as input:
             - savefig (bool): Whether to save the figure or not (default: False);
@@ -602,7 +596,7 @@ class CorePtf(object):
 
     def plot_compared_performance(self, factor=1, savefig=False):
         """
-        Plot the performance of the core equity portfolio and the benchmark.
+        Plot the total performance of the core equity factors replicating portfolios and the benchmark.
 
         Takes as input:
             - factor (int): The factor replicating portfolio to plot (default: 1);
@@ -683,7 +677,7 @@ class CorePtf(object):
 
     def plot_core_ptf_comp(self, savefig=False):
         """
-        Pie chart showing the composition of the first core equity portfolio
+        Pie chart showing the composition of the first core equity factor replicating portfolio.
 
         Takes as input:
             - savefig (bool): Whether to save the figure or not (default: False);
@@ -720,7 +714,7 @@ class CorePtf(object):
 
     def plot_alpha_distribution(self, savefig=False):
         """
-        Plot the distribution of the alpha of the first core equity factor replicating portfolio
+        Plot the distribution of the estimated alphas of the simulated first core equity factor replicating portfolios.
 
         Takes as input:
             - savefig (bool): Whether to save the figure or not (default: False);
@@ -753,7 +747,7 @@ class CorePtf(object):
 
     def plot_mean_vol_sim(self, savefig=False):
         """
-        Plot the mean return and volatility of the simulated portfolios
+        Plot the mean return and volatility of the simulated first core equity factor replicating portfolios.
 
         Takes as input:
             - savefig (bool): Whether to save the figure or not (default: False);

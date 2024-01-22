@@ -42,8 +42,7 @@ if __name__ == "__main__":
     # - The first core equity replicating portfolios is then built using the regression coefficients and
     # an optimization routine (minimize the variance of the portfolio).
 
-    CPtf.compute_core_equity_ptf()
-    core_eq_composition = CPtf.core_equity_ptf
+    core_eq_composition = CPtf.compute_core_equity_ptf()
 
     print(
         "\n",
