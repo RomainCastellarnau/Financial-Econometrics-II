@@ -1,7 +1,6 @@
 from CorePtf import CorePtf
 
 if __name__ == "__main__":
-    
     ############################################
 
     # Initialization of the class:
@@ -48,8 +47,8 @@ if __name__ == "__main__":
     print(
         "\n",
         "1st Core Factor Replicating Portfolio Composition: ",
-        "\n",
         core_eq_composition,
+        "\n",
     )
 
     ############################################
@@ -62,7 +61,7 @@ if __name__ == "__main__":
     CPtf.alpha_core_ptf()
     core_eq_1_ptf_stat = CPtf.ptf_stats
 
-    print("1st Core Factor Replicating Portfolio Statistics: ", "\n")
+    print("1st Core Factor Replicating Portfolio Performance Statistics: ", "\n")
     for key, value in core_eq_1_ptf_stat.items():
         print(key, ":", value, "\n")
 
