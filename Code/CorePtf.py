@@ -377,15 +377,11 @@ class CorePtf(object):
         self.total_return_benchmark = np.cumprod(1 + self.benchmark) - 1
 
         # Compute the volatility of the core equity portfolio
-        self.core_ptf_vol = (
-            np.sqrt(
-                self.core_equity_ptf["weights"].T
-                @ self.cov_matrix
-                @ self.core_equity_ptf["weights"]
-                * 12
-            )
-            ** 0.5
-        )
+        self.core_ptf_vol = np.sqrt(
+            self.core_equity_ptf["weights"].T
+            @ self.cov_matrix
+            @ self.core_equity_ptf["weights"]
+        ) * np.sqrt(12)
 
         # Store the results in a dictionary
         self.ptf_stats = {
@@ -442,10 +438,8 @@ class CorePtf(object):
 
             self.sim_ptf_returns.append(np.mean(return_core_ptf) * 12)
             self.sim_ptf_vol.append(
-                np.sqrt(
-                    perturbed_weights.T @ perturbed_cov_matrix @ perturbed_weights * 12
-                )
-                ** 0.5
+                np.sqrt(perturbed_weights.T @ perturbed_cov_matrix @ perturbed_weights)
+                * np.sqrt(12)
             )
             self.alphas.append(alpha_sim)
             perfs.append(sim_perf)
@@ -506,9 +500,8 @@ class CorePtf(object):
                 self.core_equity_ptf_2["weights"].T
                 @ self.cov_matrix
                 @ self.core_equity_ptf_2["weights"]
-                * 12
             )
-            ** 0.5
+            * np.sqrt(12)
         )
 
         vol_ptf_3 = (
@@ -516,9 +509,8 @@ class CorePtf(object):
                 self.core_equity_ptf_3["weights"].T
                 @ self.cov_matrix
                 @ self.core_equity_ptf_3["weights"]
-                * 12
             )
-            ** 0.5
+            * np.sqrt(12)
         )
         higher_factor_ptfs = {
             "Average return (annualized)": [perf_ptf_2, perf_ptf_3],
