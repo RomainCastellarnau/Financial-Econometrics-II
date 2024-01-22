@@ -47,6 +47,7 @@ if __name__ == "__main__":
     print(
         "\n",
         "1st Core Factor Replicating Portfolio Composition: ",
+        "\n",
         core_eq_composition,
         "\n",
     )
